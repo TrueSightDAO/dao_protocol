@@ -311,6 +311,12 @@ def build_event_cli(
             action="store_true",
             help="Print the signed share text without hitting Edgar.",
         )
+        parser.add_argument(
+            "--attachment",
+            default=None,
+            metavar="FILE",
+            help="Local file to attach (e.g. invoice PDF). Sent as multipart alongside the signed event. Edgar parses the Destination Contribution File Location URL in the text and uploads the file to GitHub.",
+        )
         args = parser.parse_args(argv)
 
         # Collect in label order: first the canonical labels that got values, then --attr extras.
@@ -354,7 +360,7 @@ def build_event_cli(
             print(share_text)
             return 0
 
-        resp = client.submit(event_name, normalized_attrs)
+        resp = client.submit(event_name, normalized_attrs, attached_file_path=args.attachment)
         print(f"HTTP {resp.status_code}")
         try:
             data = resp.json()
