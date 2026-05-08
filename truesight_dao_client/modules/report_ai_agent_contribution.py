@@ -19,6 +19,7 @@ import re
 import sys
 
 from ..edgar_client import EdgarClient
+from .report_contribution import VALID_CONTRIBUTION_TYPES, _validate_contribution_type
 
 DEFAULT_GEN = (
     "https://github.com/TrueSightDAO/agentic_ai_context/blob/main/DAO_CLIENT_AI_AGENT_CONTRIBUTIONS.md"
@@ -31,6 +32,8 @@ PR_PATTERN = re.compile(
 
 def _contributors_from_email(email: str) -> str:
     email = (email or "").strip()
+    if email == "garyjob@gmail.com":
+        return "Gary Teh"
     if "@" in email:
         return email.split("@", 1)[0].replace(".", " ").title() + f" <{email}>"
     return email or "AI Agent"
@@ -87,8 +90,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument(
         "--type",
         required=True,
-        choices=["Time", "USD"],
-        help='Contribution type: "Time" (compute TDG from hours/minutes) or "USD" (TDG = USD).',
+        choices=sorted(VALID_CONTRIBUTION_TYPES),
+        help='Contribution type. Must match Intiatives Scoring Rubric. Valid: %(choices)s.',
     )
     p.add_argument(
         "--hours",
@@ -153,8 +156,18 @@ def main(argv: list[str] | None = None) -> int:
         args.type, args.hours, args.minutes, args.usd
     )
 
-    # Format Type label to match DApp
-    type_label = "Time (Minutes)" if args.type == "Time" else "USD"
+    # Format Type label — pass through if already canonical (e.g. "AI Agent (software & documentation)")
+    if args.type in VALID_CONTRIBUTION_TYPES:
+        type_label = args.type
+    elif args.type == "Time":
+        type_label = "Time (Minutes)"
+    elif args.type == "USD":
+        type_label = "USD"
+    else:
+        type_label = args.type  # Should have been caught by choices above, but belt-and-suspenders
+
+    # Validate against canonical set before submitting
+    _validate_contribution_type(type_label)
 
     pr_block = "Pull requests (GitHub evidence):\n" + "\n".join(f"- {u.strip()}" for u in prs)
     description = f"{args.title.strip()}\n\n{pr_block}\n\nDetails:\n{body}"
