@@ -31,9 +31,14 @@ PR_PATTERN = re.compile(
 
 
 def _contributors_from_email(email: str) -> str:
+    """Derive default contributor name from EMAIL or CONTRIBUTOR_NAME env var.
+    
+    Prefers CONTRIBUTOR_NAME if set. Otherwise derives from EMAIL local-part.
+    """
+    name = (os.getenv("CONTRIBUTOR_NAME") or "").strip()
+    if name:
+        return name
     email = (email or "").strip()
-    if email == "garyjob@gmail.com":
-        return "Gary Teh"
     if "@" in email:
         return email.split("@", 1)[0].replace(".", " ").title() + f" <{email}>"
     return email or "AI Agent"
