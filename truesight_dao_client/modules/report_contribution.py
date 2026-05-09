@@ -18,7 +18,6 @@ VALID_CONTRIBUTION_TYPES = {
     "USD",
     "USDT sent",
     "USDT received",
-    "AI Agent (software & documentation)",
 }
 
 # Grok scoring splits comma-separated contributors into separate rows.
