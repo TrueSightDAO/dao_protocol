@@ -149,30 +149,29 @@ def main(argv: list[str] | None = None) -> int:
         if not PR_PATTERN.match(u):
             p.error(f"Invalid --pr (must be TrueSightDAO pull URL): {u!r}")
 
+    # Normalize type to short form for internal logic
+    _type_map = {
+        "Time (Minutes)": "Time",
+        "USD": "USD",
+        "USDT sent": "USD",
+        "USDT received": "USD",
+    }
+    internal_type = _type_map.get(args.type, "Time")
+
     # Validate type-specific inputs
-    if args.type == "Time":
+    if internal_type == "Time":
         if args.hours <= 0 and args.minutes <= 0:
             p.error("--type Time requires --hours and/or --minutes > 0")
-    elif args.type == "USD":
+    elif internal_type == "USD":
         if args.usd <= 0:
             p.error("--type USD requires --usd > 0")
 
     amount, tdg_issued = _compute_amount_and_tdg(
-        args.type, args.hours, args.minutes, args.usd
+        internal_type, args.hours, args.minutes, args.usd
     )
 
-    # Format Type label — pass through if already canonical (e.g. "AI Agent (software & documentation)")
-    if args.type in VALID_CONTRIBUTION_TYPES:
-        type_label = args.type
-    elif args.type == "Time":
-        type_label = "Time (Minutes)"
-    elif args.type == "USD":
-        type_label = "USD"
-    else:
-        type_label = args.type  # Should have been caught by choices above, but belt-and-suspenders
-
-    # Validate against canonical set before submitting
-    _validate_contribution_type(type_label)
+    # Use the canonical type label from the rubric, not the internal short form
+    type_label = args.type if args.type in VALID_CONTRIBUTION_TYPES else "Time (Minutes)"
 
     pr_block = "Pull requests (GitHub evidence):\n" + "\n".join(f"- {u.strip()}" for u in prs)
     description = f"{args.title.strip()}\n\n{pr_block}\n\nDetails:\n{body}"
