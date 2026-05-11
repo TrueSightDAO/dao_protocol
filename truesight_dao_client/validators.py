@@ -32,6 +32,18 @@ Use as:
             'Conversion Date': normalize_date_to_yyyymmdd,
         },
     )
+
+Known limitation:
+    `build_event_cli` runs validators only on labels that received a value.
+    A missing label (`--ledger-url` not passed at all) silently skips its
+    validator — even if you wired the strict `google_sheets_url` (vs
+    `_or_empty`) validator. So `required` here means "must not be empty
+    when present", not "must always be present". The receiving GAS catches
+    truly-missing required fields (e.g. validateManagedLedger rejects empty
+    Ledger URL for Capital Injection) — fix flows back to the operator as
+    a FAILED row in the intake sheet rather than a clean CLI error.
+    Tracked as future work; closing it would require adding
+    `required_labels=` to build_event_cli.
 """
 from __future__ import annotations
 
@@ -70,6 +82,43 @@ def non_negative_integer(value: str) -> None:
         raise ValueError(f"must be >= 0 (got {value!r})")
 
 
+def positive_integer(value: str) -> None:
+    """Reject non-integer or non-positive (zero or negative) values."""
+    raw = str(value).replace(",", "").strip()
+    try:
+        n = int(raw)
+    except (TypeError, ValueError):
+        raise ValueError(f"must be an integer (got {value!r})")
+    if n <= 0:
+        raise ValueError(f"must be > 0 (got {value!r})")
+
+
+def latitude(value: str) -> None:
+    """Decimal degrees in [-90, 90]. Empty allowed (some events log lat/lng optionally)."""
+    raw = str(value or "").strip()
+    if not raw:
+        return
+    try:
+        n = float(raw)
+    except (TypeError, ValueError):
+        raise ValueError(f"latitude must be a number (got {value!r})")
+    if not (-90 <= n <= 90):
+        raise ValueError(f"latitude must be in [-90, 90] (got {n})")
+
+
+def longitude(value: str) -> None:
+    """Decimal degrees in [-180, 180]. Empty allowed."""
+    raw = str(value or "").strip()
+    if not raw:
+        return
+    try:
+        n = float(raw)
+    except (TypeError, ValueError):
+        raise ValueError(f"longitude must be a number (got {value!r})")
+    if not (-180 <= n <= 180):
+        raise ValueError(f"longitude must be in [-180, 180] (got {n})")
+
+
 _YYYYMMDD = re.compile(r"^\d{8}$")
 _ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
@@ -95,21 +144,23 @@ def yyyymmdd_date(value: str) -> None:
     raise ValueError(f"must be YYYYMMDD or YYYY-MM-DD (got {value!r})")
 
 
-_CURRENCY_CODE = re.compile(r"^[A-Za-z][A-Za-z0-9 .'\-]{0,49}$")
+_CURRENCY_START = re.compile(r"^[A-Za-z0-9]")
+_CURRENCY_BAD = re.compile(r"[\x00-\x1f\x7f]")  # control chars only
 
 
 def currency_code(value: str) -> None:
-    """Accept a currency identifier string. Loose by design — DAO currencies
-    include fiat ISO codes ("USD", "BRL"), product SKUs ("Cacao Almonds (KG)"),
-    and equipment names. Just rejects empty / nonsense, not non-ISO."""
+    """Accept a currency identifier string. Very loose by design — DAO
+    currencies include fiat ISO codes ("USD", "BRL"), product SKUs with
+    parens / commas / plus signs ("Cacao Almonds (KG)", "Amazon LFSEMINI ...
+    + drawstring bag"), and equipment names. Just rejects empty, control
+    chars, and inputs that don't start with a letter or digit."""
     raw = str(value).strip()
     if not raw:
         raise ValueError("currency cannot be empty")
-    if not _CURRENCY_CODE.match(raw):
-        raise ValueError(
-            f"currency {value!r} contains unexpected characters; "
-            "use letters/digits/space/.'- and start with a letter"
-        )
+    if not _CURRENCY_START.match(raw):
+        raise ValueError(f"currency must start with a letter or digit (got {value!r})")
+    if _CURRENCY_BAD.search(raw):
+        raise ValueError(f"currency contains control characters (got {value!r})")
 
 
 _URL = re.compile(r"^https?://", re.IGNORECASE)
@@ -132,6 +183,18 @@ def google_sheets_url_or_empty(value: str) -> None:
     if "docs.google.com/spreadsheets/d/" not in raw:
         raise ValueError(
             f"must be empty or a docs.google.com/spreadsheets/d/... URL (got {value!r})"
+        )
+
+
+def google_sheets_url(value: str) -> None:
+    """Required (non-empty) Google Sheets edit URL. Use for events that won't
+    accept the offchain default (e.g. Capital Injection)."""
+    raw = str(value or "").strip()
+    if not raw:
+        raise ValueError("Google Sheets URL is required")
+    if "docs.google.com/spreadsheets/d/" not in raw:
+        raise ValueError(
+            f"must be a docs.google.com/spreadsheets/d/... URL (got {value!r})"
         )
 
 
