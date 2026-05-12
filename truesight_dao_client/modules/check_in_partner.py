@@ -47,7 +47,12 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--partner-id", required=True, help="Slug from Agroverse Partners!A (e.g. the-way-home-shop).")
     p.add_argument("--contributor-name", required=True, help="Exact Contributors contact information!A name (e.g. 'Gergana - The Way Home Shop').")
     p.add_argument("--check-in-date", default="", help="ISO date YYYY-MM-DD. Default: today.")
-    p.add_argument("--method", required=True, choices=["Text", "Phone", "In Person", "Email", "Other"], help="How the check-in was conducted.")
+    p.add_argument(
+        "--method",
+        required=True,
+        choices=["Text", "WhatsApp", "Instagram", "Facebook Messenger", "Phone", "Email", "In Person", "Other"],
+        help="How the check-in was conducted.",
+    )
     p.add_argument("--stock-status", required=True, choices=["Low", "Out", "OK", "Unknown"], help="Partner's current stock status.")
     p.add_argument("--restock-needed", required=True, choices=["Yes", "No", "Maybe"], help="Whether partner needs a restock.")
     p.add_argument("--restock-sku", default="", help="SKU slug from partners-velocity.json items (e.g. 8-ounce-organic-cacao-nibs). Use 'Other' if the partner asked for a SKU they don't carry. Only meaningful when --restock-needed=Yes.")
