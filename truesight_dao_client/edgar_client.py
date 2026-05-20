@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import base64
 import os
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, Mapping
@@ -257,6 +258,52 @@ class EdgarClient:
 # ------------------------------------------------------------- CLI scaffolding
 
 
+ATTACHMENT_REPO_BASE_URL = "https://github.com/TrueSightDAO/.github/tree/main/assets/"
+_ATTACHED_FILENAME_LABEL = "Attached Filename"
+_DESTINATION_LABEL_RE = re.compile(r"^Destination .* File Location$")
+
+
+def _derive_event_filename_prefix(event_name: str) -> str:
+    """``CAPITAL INJECTION EVENT`` → ``capital_injection``."""
+    name = (event_name or "").upper().strip()
+    if name.endswith(" EVENT"):
+        name = name[: -len(" EVENT")]
+    return name.lower().replace(" ", "_") or "event"
+
+
+def _sanitize_filename_part(value: str) -> str:
+    return re.sub(r"[^a-zA-Z0-9.]", "_", (value or "")).strip("_").lower() or "unknown"
+
+
+def _sanitize_contributor_part(email: str) -> str:
+    local = (email or "").split("@", 1)[0]
+    return _sanitize_filename_part(local)
+
+
+def _generate_attachment_filename(event_name: str, contributor_email: str, original_filename: str) -> str:
+    """Mirror the dapp filename pattern so the assets bucket stays consistent.
+
+    Examples:
+        contribution_20260520213412_garyjob_capture.png
+        capital_injection_20260520213412_garyjob_receipt_5y1992.pdf
+    """
+    from datetime import datetime, timezone
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+    return "{prefix}_{ts}_{contrib}_{name}".format(
+        prefix=_derive_event_filename_prefix(event_name),
+        ts=timestamp,
+        contrib=_sanitize_contributor_part(contributor_email),
+        name=_sanitize_filename_part(original_filename),
+    )
+
+
+def _find_destination_label(labels: list[str]) -> str | None:
+    for lbl in labels or []:
+        if _DESTINATION_LABEL_RE.match(lbl):
+            return lbl
+    return None
+
+
 def build_event_cli(
     *,
     event_name: str,
@@ -354,6 +401,27 @@ def build_event_cli(
         client = EdgarClient.from_env()
         if args.generation_source:
             client.generation_source = args.generation_source
+
+        # ─── Attachment auto-fill ─────────────────────────────────────
+        # Mirrors dapp/report_contribution.html behaviour: when an
+        # --attachment is provided but the operator didn't explicitly set
+        # the Attached Filename / Destination ... File Location labels,
+        # auto-generate them so Edgar knows where to commit the file.
+        # Without these labels in the payload, Edgar receives the bytes
+        # but returns fileUploadedToGithub:false (silent failure mode).
+        if args.attachment:
+            seen_labels = {lbl for lbl, _ in normalized_attrs}
+            original_filename = Path(args.attachment).name
+            if _ATTACHED_FILENAME_LABEL in seen_labels:
+                generated_name = next(v for lbl, v in normalized_attrs if lbl == _ATTACHED_FILENAME_LABEL)
+            else:
+                generated_name = _generate_attachment_filename(event_name, client.email, original_filename)
+                normalized_attrs.append((_ATTACHED_FILENAME_LABEL, generated_name))
+                seen_labels.add(_ATTACHED_FILENAME_LABEL)
+
+            destination_label = _find_destination_label(labels)
+            if destination_label and destination_label not in seen_labels:
+                normalized_attrs.append((destination_label, ATTACHMENT_REPO_BASE_URL + generated_name))
 
         if args.dry_run:
             payload, txn_id, share_text = client.sign(event_name, normalized_attrs)
