@@ -117,7 +117,13 @@ except ImportError:  # pragma: no cover
 from ..edgar_client import EdgarClient
 
 MAIN_LEDGER_ID = "1GE7PUq-UT6x2rBN-Q2ksogbWpgyuh2SaxJyG_uEK6PU"
-PARTNERS_SHEET = "Agroverse Partners"
+# Look up the partners tab by gid (stable) rather than the display name. The
+# tab is currently labeled "Agroverse Partners" but is queued for rename to
+# "DAO Partners" since its rows now span Operator/Supplier/Freight Provider —
+# see agentic_ai_context/OPEN_FOLLOWUPS.md. Switching to gid here means the
+# rename becomes a safe no-op for this consumer.
+PARTNERS_SHEET_GID = 1983902109
+PARTNERS_SHEET = "Agroverse Partners"  # display name only — used in log output
 CONTRIBUTORS_SHEET = "Contributors contact information"
 
 # Contributors column indices (1-based for gspread cell ops).
@@ -434,7 +440,7 @@ def step3_append_partners_row(manifest: Manifest, *, dry_run: bool) -> None:
     print("\n=== Step 3 — Append Agroverse Partners row ===")
     gc = _gspread_client()
     sh = _retry(lambda: gc.open_by_key(MAIN_LEDGER_ID))
-    ap = _retry(lambda: sh.worksheet(PARTNERS_SHEET))
+    ap = _retry(lambda: sh.get_worksheet_by_id(PARTNERS_SHEET_GID))
     ap_data = _retry(lambda: ap.get_all_values())
 
     # Idempotency: prefer partner_id (col A) when present; for operator rows
