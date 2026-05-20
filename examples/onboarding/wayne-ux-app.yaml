@@ -1,0 +1,23 @@
+# Operator partner onboarding — Wayne (UX.APP).
+#
+# Wayne is an Operator Partner: helps coordinate AWS account recovery
+# (account 767697632458, "nelanco"/Cypher-Defense legacy) and other
+# infra-side ops. No public partner page, no inventory, no website
+# surfaces — just a Contributors row + an Agroverse Partners row
+# (partner_type=Operator) so partner follow-up cadences can reach him.
+#
+# Run:
+#   cd dao_client
+#   python -m truesight_dao_client.modules.onboard_partner \
+#     --manifest examples/onboarding/wayne-ux-app.yaml --role operator --dry-run
+#   # then re-run with --execute when the dry-run output looks right.
+
+partner_name: UX.APP
+contact_first_name: Wayne
+email: wayne@ux.app
+role: operator
+partner_type: Operator
+notes: "Operator partner; coordinating AWS account 767697632458 (nelanco) recovery + infra ops. Primary contact email wayne@ux.app."
+
+# Address/location intentionally omitted — operator partners are people, not venues.
+# run_syncs has no effect for operator role (no inventory impact).
