@@ -13,8 +13,12 @@ Use cases:
 
 Required:
   - ``./.env`` with EMAIL, PUBLIC_KEY, PRIVATE_KEY (run ``truesight-dao-auth login``).
-  - ``--partner-id`` (must match an `Agroverse Partners` row).
   - ``--contributor-name`` (must match `Contributors contact information`!A).
+  - ``--partner-id`` for venue partners (must match an `Agroverse Partners` row);
+    omit for operator partners (those rows have empty col A by convention —
+    e.g. Wayne - UX.APP). When ``--partner-id`` is omitted, ``--stock-status``
+    and ``--restock-needed`` may also be omitted (default to ``Unknown`` /
+    ``No``) since operator partners carry no inventory.
 
 Run:
   python -m truesight_dao_client.modules.check_in_partner --help
@@ -44,7 +48,7 @@ def main(argv: list[str] | None = None) -> int:
             "partner check-in via Edgar + GAS scanner."
         ),
     )
-    p.add_argument("--partner-id", required=True, help="Slug from Agroverse Partners!A (e.g. the-way-home-shop).")
+    p.add_argument("--partner-id", default="", help="Slug from Agroverse Partners!A (e.g. the-way-home-shop). Omit for operator partners (col A is empty by convention).")
     p.add_argument("--contributor-name", required=True, help="Exact Contributors contact information!A name (e.g. 'Gergana - The Way Home Shop').")
     p.add_argument("--check-in-date", default="", help="ISO date YYYY-MM-DD. Default: today.")
     p.add_argument(
@@ -53,8 +57,8 @@ def main(argv: list[str] | None = None) -> int:
         choices=["Text", "WhatsApp", "Instagram", "Facebook Messenger", "Phone", "Email", "In Person", "Other"],
         help="How the check-in was conducted.",
     )
-    p.add_argument("--stock-status", required=True, choices=["Low", "Out", "OK", "Unknown"], help="Partner's current stock status.")
-    p.add_argument("--restock-needed", required=True, choices=["Yes", "No", "Maybe"], help="Whether partner needs a restock.")
+    p.add_argument("--stock-status", default="Unknown", choices=["Low", "Out", "OK", "Unknown"], help="Partner's current stock status. Defaults to 'Unknown' (typical for operator partners).")
+    p.add_argument("--restock-needed", default="No", choices=["Yes", "No", "Maybe"], help="Whether partner needs a restock. Defaults to 'No' (typical for operator partners).")
     p.add_argument("--restock-sku", default="", help="SKU slug from partners-velocity.json items (e.g. 8-ounce-organic-cacao-nibs). Use 'Other' if the partner asked for a SKU they don't carry. Only meaningful when --restock-needed=Yes.")
     p.add_argument("--restock-quantity", default="", help="Integer quantity (units of --restock-sku). Only meaningful when --restock-needed=Yes.")
     p.add_argument("--next-check-in-date", default="", help="ISO date YYYY-MM-DD. When to check in again.")
