@@ -5,6 +5,12 @@ hooks — they just weren't being used. This module gives event modules a small
 shared toolkit so the same checks (positive numbers, YYYYMMDD dates, currency
 codes, URLs) don't get re-inlined everywhere.
 
+Some validators (e.g. ``partner_contributor_name``) hit a live API for the
+canonical allow-list so future LLMs / operators can't hallucinate names that
+will silently break a downstream join. The fetch is cached for the process
+lifetime; if the endpoint is unreachable the validator degrades to "allow"
+and lets the GAS scanner be the strict gate.
+
 Convention:
 - A **validator** raises `ValueError(message)` if the value is invalid; otherwise returns `None`.
   `build_event_cli` catches the ValueError and exits with `parser.error(str(exc))`.
@@ -48,7 +54,11 @@ Known limitation:
 from __future__ import annotations
 
 import datetime
+import functools
+import json
 import re
+import urllib.error
+import urllib.request
 
 
 # ---------------------------------------------------------------------------
@@ -228,3 +238,86 @@ def normalize_date_to_yyyymmdd(value: str) -> str:
 
 def strip(value: str) -> str:
     return str(value or "").strip()
+
+
+# ---------------------------------------------------------------------------
+# API-backed validators (live allow-lists from deployed GAS endpoints)
+# ---------------------------------------------------------------------------
+
+# Deployed `listPartnerContributors` endpoint on `tdg_shipping_planner`. Same
+# JSON the dapp/partner_check_in.html page consumes — so the dao_client CLI
+# and the DApp dropdown stay in lockstep on what counts as a valid name.
+# Override in tests via `set_partner_contributors_url(...)`.
+_PARTNER_CONTRIBUTORS_URL = (
+    "https://script.google.com/macros/s/"
+    "AKfycbz5Tt_vz1X26i82yqlGUSI_OtCUEO31jImZH2tXfNaxMbfmJ01dkwUIEZDjsnd10xMbcg"
+    "/exec?action=list_partner_contributors"
+)
+
+
+def set_partner_contributors_url(url: str) -> None:
+    """Override the partner-contributors endpoint URL (for tests / staging)."""
+    global _PARTNER_CONTRIBUTORS_URL
+    _PARTNER_CONTRIBUTORS_URL = url
+    fetch_partner_contributors.cache_clear()
+
+
+@functools.lru_cache(maxsize=1)
+def fetch_partner_contributors() -> tuple[str, ...]:
+    """Fetch the canonical Contributor Name allow-list from the live GAS.
+
+    Returns the tuple of distinct contributor display names, exactly as the
+    DApp's partner-check-in dropdown sees them. Cached for the process
+    lifetime — every CLI invocation is short-lived so a single fetch is fine.
+    Returns an empty tuple on any network / parse failure so the calling
+    validator can degrade to "allow" (the GAS scanner is the strict gate).
+    """
+    try:
+        with urllib.request.urlopen(_PARTNER_CONTRIBUTORS_URL, timeout=10) as resp:
+            payload = json.load(resp)
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError):
+        return ()
+    if payload.get("status") != "success":
+        return ()
+    partners = payload.get("data", {}).get("partners", [])
+    seen: dict[str, None] = {}
+    for p in partners:
+        name = str(p.get("contributor") or "").strip()
+        if name and name not in seen:
+            seen[name] = None
+    return tuple(seen)
+
+
+def partner_contributor_name(value: str) -> None:
+    """Reject Contributor Name values not on the live DAO Partners allow-list.
+
+    Source of truth: deployed `tdg_shipping_planner.listPartnerContributors`
+    GAS endpoint (same JSON `partner_check_in.html` consumes for its
+    dropdown). Catches typos + LLM hallucinations that would otherwise
+    silently break joins into Partner Check-ins / DAO Partners.
+
+    Degrades to "allow" if the endpoint is unreachable so a network blip
+    doesn't block legitimate submissions; the receiving GAS scanner still
+    enforces correctness server-side.
+    """
+    raw = str(value or "").strip()
+    if not raw:
+        raise ValueError("contributor name cannot be empty")
+    valid = fetch_partner_contributors()
+    if not valid:
+        return  # endpoint unreachable — let the GAS be the strict gate
+    if raw in valid:
+        return
+    # Helpful suggestions for typos. Canonicalize by stripping non-alphanumerics
+    # + lowercasing so "Wayne - UX APP" matches "Wayne - UX.APP" etc.
+    def _canon(s: str) -> str:
+        return re.sub(r"[^a-z0-9]+", "", s.lower())
+    canon = _canon(raw)
+    near = [n for n in valid if _canon(n) == canon][:5]
+    if not near:
+        near = [n for n in valid if canon and (canon in _canon(n) or _canon(n) in canon)][:5]
+    msg = f"{raw!r} is not on the DAO Partners contributor list ({len(valid)} valid names)."
+    if near:
+        msg += f" Did you mean one of: {near}?"
+    msg += " Pass --skip-name-check to override (e.g. for a partner you just onboarded that hasn't propagated yet)."
+    raise ValueError(msg)
