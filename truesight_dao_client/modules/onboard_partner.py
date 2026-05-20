@@ -2,9 +2,12 @@
 """Onboard a new partner end-to-end — ledger, inventory, and discovery surfaces.
 
 Renamed 2026-04-30 from ``onboard_retail_partner`` and extended with a
-``--role`` flag (``retail`` | ``processing``) so the same module handles
-both retail venues (places that sell our cacao) and processing partners
-(facilities that *convert* nibs → bars / ship / store inventory). Collapses
+``--role`` flag (``retail`` | ``processing`` | ``operator``) so the same
+module handles retail venues (places that sell our cacao), processing
+partners (facilities that *convert* nibs → bars / ship / store inventory),
+and operator partners (people contributing operational/infra labor — AWS
+admin, freight, ops support — who need a Contributors row + Agroverse
+Partners row for follow-up tracking but no public partner page). Collapses
 the manual steps in ``agentic_ai_context/RETAILER_TECHNICAL_ONBOARDING.md``
 §3 into a single manifest-driven CLI invocation:
 
@@ -57,14 +60,14 @@ Usage:
         --manifest path/to/manifest.yaml --role processing --execute
 
 Manifest schema (YAML):
-    partner_id: shiok-kitchen-menlo-park       # slug; canonical key
-    partner_name: Shiok Singapore Kitchen
+    partner_id: shiok-kitchen-menlo-park       # slug; canonical key (required for retail/processing; omit for operator)
+    partner_name: Shiok Singapore Kitchen      # for operator role: the partner-org name (e.g. "UX.APP")
     contact_first_name: Dennis
     email: shiokkitchen@gmail.com
-    address: "625 Oak Grove Avenue, Menlo Park, CA 94025"
-    location: "Menlo Park, California"         # used for Agroverse Partners col F + journey filter
-    role: processing                            # retail | processing — overridable via CLI --role
-    partner_type: Manufacturer                  # Wholesale / Consignment / Operator / Supplier / Manufacturer
+    address: "625 Oak Grove Avenue, Menlo Park, CA 94025"   # required for retail/processing; optional for operator
+    location: "Menlo Park, California"         # used for Agroverse Partners col F + journey filter (omit for operator)
+    role: processing                            # retail | processing | operator — overridable via CLI --role
+    partner_type: Manufacturer                  # Wholesale / Consignment / Operator / Supplier / Manufacturer (defaults to Operator when role=operator)
     partner_type_label:                         # optional; narrative shown on the partner page
        "Processing Partner — Commercial Kitchen Access (Off-Hours)"
     lat: 37.4527                                # required for js/partners-data.js
@@ -139,7 +142,13 @@ class OpeningOrder:
     qr_codes: list[str] = field(default_factory=list)
 
 
-VALID_ROLES = {"retail", "processing"}
+VALID_ROLES = {"retail", "processing", "operator"}
+
+# Roles that anchor to a physical venue and therefore require address/location
+# for downstream steps (mailing-address write, partners-data.js geocoding,
+# inventory movements). ``operator`` partners are people, not places — they
+# only need the contributor row + Agroverse Partners follow-up entry.
+VENUE_ROLES = {"retail", "processing"}
 
 
 @dataclass
@@ -173,6 +182,11 @@ class Manifest:
 
     @property
     def partner_page_url(self) -> str:
+        # Operator partners don't have public partner pages; the existing
+        # Agroverse Partners rows for Operator type (e.g. "Gary Teh") have
+        # empty col C, so mirror that.
+        if self.role == "operator" or not self.partner_id:
+            return ""
         return f"https://agroverse.shop/partners/{self.partner_id}"
 
     @property
@@ -185,6 +199,8 @@ class Manifest:
         """
         if self.partner_type_label.strip():
             return self.partner_type_label.strip()
+        if self.role == "operator":
+            return "Operator Partner"
         return "Processing Partner" if self.role == "processing" else "Retail Partner"
 
 
@@ -195,12 +211,24 @@ def load_manifest(path: Path) -> Manifest:
     if not isinstance(raw, dict):
         raise SystemExit(f"Manifest must be a YAML mapping (got {type(raw).__name__}).")
 
-    required = ["partner_id", "partner_name", "contact_first_name", "email", "address", "location"]
+    role = (raw.get("role") or "retail").strip().lower()
+    if role not in VALID_ROLES:
+        raise SystemExit(f"role must be one of {sorted(VALID_ROLES)}; got {role!r}.")
+
+    # Operator partners don't anchor to a venue; only the contributor identity
+    # fields are required. Venue roles (retail/processing) still need address
+    # + location so downstream steps (mailing-address write, partners-data.js,
+    # journey filters) can run.
+    if role in VENUE_ROLES:
+        required = ["partner_id", "partner_name", "contact_first_name", "email", "address", "location"]
+    else:
+        required = ["partner_name", "contact_first_name", "email"]
     missing = [k for k in required if not raw.get(k)]
     if missing:
-        raise SystemExit(f"Manifest missing required fields: {', '.join(missing)}")
+        raise SystemExit(f"Manifest missing required fields for role={role!r}: {', '.join(missing)}")
 
-    ptype = (raw.get("partner_type") or "Consignment").strip()
+    default_ptype = "Operator" if role == "operator" else "Consignment"
+    ptype = (raw.get("partner_type") or default_ptype).strip()
     if ptype not in ALLOWED_PARTNER_TYPES:
         raise SystemExit(
             f"partner_type must be one of {sorted(ALLOWED_PARTNER_TYPES)}; got {ptype!r}."
@@ -218,10 +246,6 @@ def load_manifest(path: Path) -> Manifest:
             qr_codes=[str(q).strip() for q in oo_raw["qr_codes"] if str(q).strip()],
         )
 
-    role = (raw.get("role") or "retail").strip().lower()
-    if role not in VALID_ROLES:
-        raise SystemExit(f"role must be one of {sorted(VALID_ROLES)}; got {role!r}.")
-
     lat = raw.get("lat")
     lon = raw.get("lon")
     try:
@@ -231,12 +255,12 @@ def load_manifest(path: Path) -> Manifest:
         raise SystemExit(f"lat/lon must be numeric if provided; got lat={lat!r} lon={lon!r}.")
 
     return Manifest(
-        partner_id=str(raw["partner_id"]).strip(),
+        partner_id=str(raw.get("partner_id") or "").strip(),
         partner_name=str(raw["partner_name"]).strip(),
         contact_first_name=str(raw["contact_first_name"]).strip(),
         email=str(raw["email"]).strip(),
-        address=str(raw["address"]).strip(),
-        location=str(raw["location"]).strip(),
+        address=str(raw.get("address") or "").strip(),
+        location=str(raw.get("location") or "").strip(),
         partner_type=ptype,
         role=role,
         partner_type_label=str(raw.get("partner_type_label") or "").strip(),
@@ -354,6 +378,9 @@ def step1_contributor_add(client: EdgarClient, manifest: Manifest, *, dry_run: b
 
 def step2_set_mailing_address(manifest: Manifest, *, dry_run: bool, max_wait_s: int = 90) -> None:
     print("\n=== Step 2 — Contributors!U (Mailing Address) ===")
+    if not manifest.address:
+        print("  No address in manifest; skipping (typical for operator partners).")
+        return
     print(f"  (col T 'Is Store Manager' intentionally NOT set — reserved for Gary + Kirsten only)")
 
     gc = _gspread_client()
@@ -410,10 +437,19 @@ def step3_append_partners_row(manifest: Manifest, *, dry_run: bool) -> None:
     ap = _retry(lambda: sh.worksheet(PARTNERS_SHEET))
     ap_data = _retry(lambda: ap.get_all_values())
 
-    # Idempotency: exact partner_id match in col A.
+    # Idempotency: prefer partner_id (col A) when present; for operator rows
+    # (no slug) fall back to contributor_contact_id (col E) match.
+    contributor_id = manifest.contributor_full_name
     for r in ap_data[1:]:
-        if r and r[0].strip() == manifest.partner_id:
+        if not r:
+            continue
+        col_a = (r[0] if len(r) > 0 else "").strip()
+        col_e = (r[4] if len(r) > 4 else "").strip()
+        if manifest.partner_id and col_a == manifest.partner_id:
             print(f"  ✓ Row already exists for partner_id={manifest.partner_id!r}; skipping.")
+            return
+        if not manifest.partner_id and col_e and col_e.lower() == contributor_id.lower():
+            print(f"  ✓ Row already exists for contributor={contributor_id!r}; skipping.")
             return
 
     now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -679,6 +715,35 @@ The full reference doc (with worked example):
   agentic_ai_context/RETAILER_TECHNICAL_ONBOARDING.md
 """
 
+_MANUAL_STEPS_TEMPLATE_OPERATOR = """
+=== Manual steps remaining (operator follow-up surface) ===
+
+The script handled: ledger ([CONTRIBUTOR ADD] for {contributor!r} +
+Agroverse Partners row with partner_type='Operator').
+
+Operator partners are people, not venues — they have no public partner
+page, no website surfaces, and receive no inventory. The remaining work
+is relationship + tracking:
+
+1. Confirm the contributor's preferred contact channel (email vs phone)
+   and log it on the Contributors row if not already captured.
+
+2. Add the partner to whatever follow-up cadence applies — partner
+   check-ins, Slack/Telegram intros, or the Hit List equivalent for
+   operator partners.
+
+3. If the operator needs a digital signature (RSA key) to submit signed
+   events on behalf of the DAO, walk them through
+   https://dapp.truesight.me/create_signature.html and then run a
+   [CONTRIBUTOR ADD EVENT] update with the public key (or
+   ``python -m truesight_dao_client.modules.report_dapp_permission_change``
+   if role changes are needed).
+
+No HTML scaffolding, no inventory movement, no syncs. Re-running this
+manifest is a no-op.
+"""
+
+
 _MANUAL_STEPS_TEMPLATE_PROCESSING = """
 === Manual steps remaining (HTML scaffolding + photos) ===
 
@@ -742,32 +807,49 @@ The full reference doc (with worked example):
 
 def run(manifest: Manifest, *, dry_run: bool, verbose: bool) -> None:
     label = "DRY RUN" if dry_run else "EXECUTE"
-    print(f"=== Onboarding {manifest.partner_id} ({manifest.partner_name}) [{label}] ===")
+    header_id = manifest.partner_id or manifest.contributor_full_name
+    print(f"=== Onboarding {header_id} ({manifest.partner_name}) [{label}] ===")
+    print(f"role:        {manifest.role}")
     print(f"contributor: {manifest.contributor_full_name}")
-    print(f"address:     {manifest.address}")
-    print(f"location:    {manifest.location}")
+    print(f"address:     {manifest.address or '(none — non-venue role)'}")
+    print(f"location:    {manifest.location or '(none — non-venue role)'}")
     print(f"type:        {manifest.partner_type}")
 
     client = EdgarClient.from_env(generation_source="dao_client/onboard_partner")
     step1_contributor_add(client, manifest, dry_run=dry_run, verbose=verbose)
     step2_set_mailing_address(manifest, dry_run=dry_run)
     step3_append_partners_row(manifest, dry_run=dry_run)
-    step5_update_listings(manifest, dry_run=dry_run)
+    if manifest.role in VENUE_ROLES:
+        step5_update_listings(manifest, dry_run=dry_run)
+    else:
+        print("\n=== Step 5 — Website discovery surfaces ===")
+        print(f"  Skipping for role={manifest.role!r} (no public partner page).")
+
     if manifest.role == "retail":
         step13_submit_movements(client, manifest, dry_run=dry_run)
-    elif manifest.opening_order:
+    elif manifest.role == "processing" and manifest.opening_order:
         # A processing manifest with an opening_order is unusual but valid —
         # e.g. an initial inbound shipment of cacao nibs to Dennis. Run it
         # but flag the unusual shape.
         print("\n=== Step 13 — opening_order on a processing role (unusual but supported) ===")
         step13_submit_movements(client, manifest, dry_run=dry_run)
-    if manifest.run_syncs:
-        step14_run_syncs(dry_run=dry_run)
+    elif manifest.role == "operator":
+        print("\n=== Step 13 — [INVENTORY MOVEMENT] events ===")
+        print("  Skipping for role='operator' (operator partners receive no inventory).")
 
-    location_short = ", ".join(p.strip() for p in manifest.location.split(",")[:2])
-    template = (_MANUAL_STEPS_TEMPLATE_PROCESSING
-                if manifest.role == "processing"
-                else _MANUAL_STEPS_TEMPLATE_RETAIL)
+    if manifest.run_syncs and manifest.role in VENUE_ROLES:
+        step14_run_syncs(dry_run=dry_run)
+    elif manifest.role == "operator":
+        print("\n=== Step 14 — Run inventory + velocity syncs ===")
+        print("  Skipping for role='operator' (no inventory impact).")
+
+    if manifest.role == "operator":
+        template = _MANUAL_STEPS_TEMPLATE_OPERATOR
+    elif manifest.role == "processing":
+        template = _MANUAL_STEPS_TEMPLATE_PROCESSING
+    else:
+        template = _MANUAL_STEPS_TEMPLATE_RETAIL
+    location_short = ", ".join(p.strip() for p in (manifest.location or "").split(",")[:2])
     print(template.format(
         slug=manifest.partner_id,
         name=manifest.partner_name,
@@ -777,6 +859,8 @@ def run(manifest: Manifest, *, dry_run: bool, verbose: bool) -> None:
         lat=manifest.lat if manifest.lat is not None else "<operator-supplied>",
         lon=manifest.lon if manifest.lon is not None else "<operator-supplied>",
         type_label=manifest.effective_partner_type_label,
+        contributor=manifest.contributor_full_name,
+        email=manifest.email,
     ))
 
 
@@ -789,7 +873,7 @@ def main(argv: Iterable[str] | None = None) -> int:
         "--role",
         choices=sorted(VALID_ROLES),
         default=None,
-        help="Override the manifest's role field (retail | processing). "
+        help="Override the manifest's role field (retail | processing | operator). "
              "If omitted, the manifest's value is used (default: retail).",
     )
     g = p.add_mutually_exclusive_group()
