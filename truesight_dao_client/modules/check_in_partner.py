@@ -34,6 +34,7 @@ import secrets
 import sys
 
 from ..edgar_client import EdgarClient
+from ..validators import partner_contributor_name
 
 DEFAULT_GEN = (
     "https://github.com/TrueSightDAO/agentic_ai_context/blob/main/PARTNER_CHECK_IN_IMPLEMENTATION.md"
@@ -74,8 +75,22 @@ def main(argv: list[str] | None = None) -> int:
         help="`This submission was generated using …` link.",
     )
     p.add_argument("--dry-run", action="store_true", help="Print signed share text; do not POST to Edgar.")
+    p.add_argument(
+        "--skip-name-check",
+        action="store_true",
+        help="Skip the strict Contributor Name check against the live DAO Partners JSON. "
+             "Use when checking in a partner you just onboarded that hasn't propagated to "
+             "the GAS endpoint yet, or when the endpoint is unreachable and you've manually "
+             "verified the name.",
+    )
 
     args = p.parse_args(argv)
+
+    if not args.skip_name_check:
+        try:
+            partner_contributor_name(args.contributor_name)
+        except ValueError as exc:
+            p.error(str(exc))
 
     check_in_date = args.check_in_date.strip()
     if not check_in_date:
