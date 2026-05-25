@@ -1,0 +1,29 @@
+# systemd unit for the dao_protocol FastAPI service.
+# Install on seni_ror_new (the Edgar app box):
+#   sudo cp truesight-dao-protocol.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now truesight-dao-protocol
+#
+# Runs uvicorn on :8010. The shared nginx box (krake_ng) reverse-proxies the
+# DAO/Agroverse paths here; everything else stays on Rails (:3002).
+# Assumes a venv at /home/ubuntu/dao_protocol/.venv (created by deploy.sh) and
+# secrets in /home/ubuntu/dao_protocol/.env (chmod 600).
+
+[Unit]
+Description=TrueSight DAO protocol service (dao_protocol FastAPI)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/dao_protocol
+EnvironmentFile=-/home/ubuntu/dao_protocol/.env
+Environment=DAO_PROTOCOL_ENVIRONMENT=production
+Environment=DAO_PROTOCOL_HOST=0.0.0.0
+Environment=DAO_PROTOCOL_PORT=8010
+ExecStart=/home/ubuntu/dao_protocol/.venv/bin/truesight-dao-protocol-server
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

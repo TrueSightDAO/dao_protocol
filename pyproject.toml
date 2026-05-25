@@ -14,11 +14,21 @@ dependencies = [
   "python-dotenv>=1.0.0",
 ]
 
+[project.optional-dependencies]
+# HTTP server half (dao_protocol). Kept optional so the CLI install stays lean.
+#   pip install truesight-dao-client[server]
+server = [
+  "fastapi>=0.110.0",
+  "uvicorn[standard]>=0.29.0",
+  "pydantic-settings>=2.2.0",
+]
+
 [project.urls]
-Homepage = "https://github.com/TrueSightDAO/dao_client"
+Homepage = "https://github.com/TrueSightDAO/dao_protocol"
 
 [project.scripts]
 truesight-dao-auth = "truesight_dao_client.auth:main"
+truesight-dao-protocol-server = "truesight_dao_client.server.main:main"
 truesight-dao-batch-qr-generator = "truesight_dao_client.modules.batch_qr_generator:main"
 truesight-dao-create-proposal = "truesight_dao_client.modules.create_proposal:main"
 truesight-dao-notarize = "truesight_dao_client.modules.notarize:main"
