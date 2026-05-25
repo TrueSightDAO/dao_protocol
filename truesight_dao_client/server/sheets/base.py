@@ -1,12 +1,10 @@
 """Service-account Google Sheets v4 client + small read/update helpers.
 
-Mirrors the Rails `Gdrive` session pattern (`GoogleDrive::Session.from_service_account_key`)
-and the demo's `service_account.Credentials` approach. The service-account JSON path comes
-from settings (`DAO_PROTOCOL_GOOGLE_SA_JSON`); on `seni_ror_new` it defaults to the same key
-Edgar's Rails app already uses, so no new credential needs provisioning.
-
-All callers treat sheet access as best-effort — the tracking routes never let a Sheets error
-break their redirect (see routes/tracking.py).
+Supports **multiple** service-account keys (different Edgar sheets use different keys — e.g. the
+QR-code tabs use `cypher_defense_gdrive_key.json` / `agroverse_qr_code_gdrive_key.json` while the
+tracking/telegram tabs use `edgar_dapp_listener_key.json`). Pass `key_path=` to pick the key;
+default is `DAO_PROTOCOL_GOOGLE_SA_JSON`. On `seni_ror_new` all keys live under
+`/home/ubuntu/sentiment_importer/config/`. Sheet access is best-effort at the call sites.
 """
 
 from __future__ import annotations
@@ -20,26 +18,27 @@ _SCOPES = ("https://www.googleapis.com/auth/spreadsheets",)
 _lock = threading.Lock()
 
 
-@functools.lru_cache(maxsize=1)
-def sheets_service():
-    """Cached Sheets v4 service. Imports google libs lazily so the server (and
-    health/proxy routes) don't hard-depend on them being installed/credentialed."""
+@functools.lru_cache(maxsize=None)
+def _service_for(key_path: str):
     from google.oauth2 import service_account
     from googleapiclient.discovery import build
 
-    creds = service_account.Credentials.from_service_account_file(
-        get_settings().google_sa_json, scopes=_SCOPES
-    )
+    creds = service_account.Credentials.from_service_account_file(key_path, scopes=_SCOPES)
     return build("sheets", "v4", credentials=creds, cache_discovery=False)
+
+
+def sheets_service(key_path: str | None = None):
+    """Cached Sheets v4 service for `key_path` (default = `google_sa_json`). Lazy google imports."""
+    return _service_for(key_path or get_settings().google_sa_json)
 
 
 def quoted_prefix(sheet_name: str) -> str:
     return "'" + sheet_name.replace("'", "''") + "'"
 
 
-def get_values(spreadsheet_id: str, a1_range: str) -> list[list]:
+def get_values(spreadsheet_id: str, a1_range: str, key_path: str | None = None) -> list[list]:
     resp = (
-        sheets_service()
+        sheets_service(key_path)
         .spreadsheets()
         .values()
         .get(spreadsheetId=spreadsheet_id, range=a1_range)
@@ -48,11 +47,22 @@ def get_values(spreadsheet_id: str, a1_range: str) -> list[list]:
     return resp.get("values", [])
 
 
-def batch_update(spreadsheet_id: str, data: list[dict]) -> dict:
+def batch_get(spreadsheet_id: str, ranges: list[str], key_path: str | None = None) -> list[list[list]]:
+    resp = (
+        sheets_service(key_path)
+        .spreadsheets()
+        .values()
+        .batchGet(spreadsheetId=spreadsheet_id, ranges=ranges)
+        .execute()
+    )
+    return [vr.get("values", []) for vr in resp.get("valueRanges", [])]
+
+
+def batch_update(spreadsheet_id: str, data: list[dict], key_path: str | None = None) -> dict:
     """`data` = [{"range": "...", "values": [[...]]}, …]. USER_ENTERED, like the Rails port."""
     body = {"valueInputOption": "USER_ENTERED", "data": data}
     return (
-        sheets_service()
+        sheets_service(key_path)
         .spreadsheets()
         .values()
         .batchUpdate(spreadsheetId=spreadsheet_id, body=body)
@@ -60,11 +70,21 @@ def batch_update(spreadsheet_id: str, data: list[dict]) -> dict:
     )
 
 
-def append_row(spreadsheet_id: str, a1_range: str, row_values: list) -> dict:
-    """Append one row (Sheets `values.append`, USER_ENTERED, INSERT_ROWS) — like the Rails
-    `TelegramRawLog.add_record` append (fast, doesn't reload the grid)."""
+def update_cell(spreadsheet_id: str, a1_range: str, value, key_path: str | None = None) -> dict:
     return (
-        sheets_service()
+        sheets_service(key_path)
+        .spreadsheets()
+        .values()
+        .update(spreadsheetId=spreadsheet_id, range=a1_range,
+                valueInputOption="USER_ENTERED", body={"values": [[value]]})
+        .execute()
+    )
+
+
+def append_row(spreadsheet_id: str, a1_range: str, row_values: list, key_path: str | None = None) -> dict:
+    """Append one row (Sheets `values.append`, USER_ENTERED, INSERT_ROWS)."""
+    return (
+        sheets_service(key_path)
         .spreadsheets()
         .values()
         .append(
@@ -78,12 +98,12 @@ def append_row(spreadsheet_id: str, a1_range: str, row_values: list) -> dict:
     )
 
 
-def find_row_by_col_a(spreadsheet_id: str, sheet_name: str, value: str) -> int | None:
+def find_row_by_col_a(spreadsheet_id: str, sheet_name: str, value: str, key_path: str | None = None) -> int | None:
     """1-based row whose column A equals `value` (header is row 1), or None."""
     value = (value or "").strip()
     if not value:
         return None
-    rows = get_values(spreadsheet_id, f"{quoted_prefix(sheet_name)}!A2:A")
+    rows = get_values(spreadsheet_id, f"{quoted_prefix(sheet_name)}!A2:A", key_path=key_path)
     for i, row in enumerate(rows):
         if row and str(row[0]).strip() == value:
             return i + 2
