@@ -60,6 +60,24 @@ def batch_update(spreadsheet_id: str, data: list[dict]) -> dict:
     )
 
 
+def append_row(spreadsheet_id: str, a1_range: str, row_values: list) -> dict:
+    """Append one row (Sheets `values.append`, USER_ENTERED, INSERT_ROWS) — like the Rails
+    `TelegramRawLog.add_record` append (fast, doesn't reload the grid)."""
+    return (
+        sheets_service()
+        .spreadsheets()
+        .values()
+        .append(
+            spreadsheetId=spreadsheet_id,
+            range=a1_range,
+            valueInputOption="USER_ENTERED",
+            insertDataOption="INSERT_ROWS",
+            body={"values": [row_values]},
+        )
+        .execute()
+    )
+
+
 def find_row_by_col_a(spreadsheet_id: str, sheet_name: str, value: str) -> int | None:
     """1-based row whose column A equals `value` (header is row 1), or None."""
     value = (value or "").strip()
