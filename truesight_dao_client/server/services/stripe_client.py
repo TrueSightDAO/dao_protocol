@@ -55,3 +55,14 @@ def retrieve_balance_transaction(bt_id: str):
     if s is None:
         return None
     return s.BalanceTransaction.retrieve(bt_id)
+
+
+def retrieve_session_full(session_id: str):
+    """For the order-sync audit log: expand line items + payment intent/charges (for fee)."""
+    s = _stripe()
+    if s is None:
+        return None
+    return s.checkout.Session.retrieve(
+        session_id,
+        expand=["line_items", "line_items.data.price.product", "payment_intent", "payment_intent.charges"],
+    )

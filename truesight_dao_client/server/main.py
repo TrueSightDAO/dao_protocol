@@ -17,7 +17,7 @@ from fastapi import FastAPI
 
 from .. import __version__
 from .config import get_settings
-from .routes import dao, health, proxy, qr_code_check, shipping, tracking
+from .routes import dao, health, proxy, qr_code_check, shipping, stripe_order_sync, tracking
 
 
 def create_app() -> FastAPI:
@@ -36,6 +36,7 @@ def create_app() -> FastAPI:
     app.include_router(shipping.router, tags=["shipping"])
     app.include_router(dao.router, tags=["dao"])
     app.include_router(qr_code_check.router, tags=["qr_code_check"])
+    app.include_router(stripe_order_sync.router, tags=["stripe_order_sync"])
     return app
 
 
