@@ -39,6 +39,10 @@ class Settings(BaseSettings):
     # credential needs provisioning. Override with DAO_PROTOCOL_GOOGLE_SA_JSON.
     google_sa_json: str = "/home/ubuntu/sentiment_importer/config/edgar_dapp_listener_key.json"
 
+    # EasyPost API key for USPS shipping rate quotes (PR4). NOT hardcoded — set
+    # DAO_PROTOCOL_EASYPOST_API_KEY in the box's .env (gitignored). Empty → rate calc returns [].
+    easypost_api_key: str = ""
+
 
 @lru_cache
 def get_settings() -> Settings:
