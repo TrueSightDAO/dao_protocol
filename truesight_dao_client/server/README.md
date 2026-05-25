@@ -10,9 +10,12 @@ This is **optional**. The CLI install stays lean; the server deps only arrive
 with the extra:
 
 ```bash
-pip install truesight-dao-client            # client + CLIs only
-pip install -e '.[server]'                  # + FastAPI / uvicorn / pydantic-settings
+pip install truesight-dao-client                  # client + CLIs only (lean)
+pip install -e . -r requirements-server.txt       # + FastAPI / uvicorn / google / easypost / stripe …
 ```
+
+Server deps live in `requirements-server.txt` (CLI base deps in `requirements.txt`) so the CLI
+install stays lean. The box deploy runs the second command.
 
 ## Run locally
 

@@ -14,18 +14,9 @@ dependencies = [
   "python-dotenv>=1.0.0",
 ]
 
-[project.optional-dependencies]
-# HTTP server half (dao_protocol). Kept optional so the CLI install stays lean.
-#   pip install truesight-dao-client[server]
-server = [
-  "fastapi>=0.110.0",
-  "uvicorn[standard]>=0.29.0",
-  "pydantic-settings>=2.2.0",
-  "google-api-python-client>=2.100.0",
-  "google-auth>=2.23.0",
-  "easypost>=8.0.0",
-  "python-multipart>=0.0.6",
-]
+# Server (dao_protocol FastAPI) dependencies live in requirements-server.txt — kept out of the
+# base install so `pip install truesight-dao-client` stays lean (CLI only). Deploy the server with
+# `pip install -e . -r requirements-server.txt`.
 
 [project.urls]
 Homepage = "https://github.com/TrueSightDAO/dao_protocol"

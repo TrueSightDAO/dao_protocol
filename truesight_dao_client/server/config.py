@@ -43,6 +43,14 @@ class Settings(BaseSettings):
     # DAO_PROTOCOL_EASYPOST_API_KEY in the box's .env (gitignored). Empty → rate calc returns [].
     easypost_api_key: str = ""
 
+    # Stripe secret key for the QR-code / meta-checkout flows (PR6). From DAO_PROTOCOL_STRIPE_SECRET_KEY
+    # (box .env). Empty → MINTED-QR checkout returns an error (gate-off safe).
+    stripe_secret_key: str = ""
+
+    # Service-account keys for the QR-code tabs (different perms than the tracking key).
+    google_sa_json_qr_lookup: str = "/home/ubuntu/sentiment_importer/config/cypher_defense_gdrive_key.json"
+    google_sa_json_qr_sales: str = "/home/ubuntu/sentiment_importer/config/agroverse_qr_code_gdrive_key.json"
+
 
 @lru_cache
 def get_settings() -> Settings:

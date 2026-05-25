@@ -37,7 +37,7 @@ run "set -euo pipefail
   git pull --ff-only origin main
   [ -d .venv ] || python3 -m venv .venv
   ./.venv/bin/pip install --upgrade pip >/dev/null
-  ./.venv/bin/pip install -e '.[server]'"
+  ./.venv/bin/pip install -e . -r requirements-server.txt"
 
 log "$SSH_HOST: restart $UNIT"
 run "sudo systemctl restart $UNIT"
