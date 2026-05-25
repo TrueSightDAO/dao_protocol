@@ -34,6 +34,11 @@ class Settings(BaseSettings):
 
     log_level: str = "info"
 
+    # Service-account JSON for Google Sheets writes (newsletter/email-agent tracking, etc.).
+    # On seni_ror_new this defaults to the same key Edgar's Rails app already uses, so no new
+    # credential needs provisioning. Override with DAO_PROTOCOL_GOOGLE_SA_JSON.
+    google_sa_json: str = "/home/ubuntu/sentiment_importer/config/edgar_dapp_listener_key.json"
+
 
 @lru_cache
 def get_settings() -> Settings:

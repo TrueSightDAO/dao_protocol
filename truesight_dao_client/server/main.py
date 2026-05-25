@@ -17,7 +17,7 @@ from fastapi import FastAPI
 
 from .. import __version__
 from .config import get_settings
-from .routes import health, proxy
+from .routes import health, proxy, tracking
 
 
 def create_app() -> FastAPI:
@@ -32,6 +32,7 @@ def create_app() -> FastAPI:
     )
     app.include_router(health.router, tags=["health"])
     app.include_router(proxy.router, tags=["proxy"])
+    app.include_router(tracking.router, tags=["tracking"])
     return app
 
 
