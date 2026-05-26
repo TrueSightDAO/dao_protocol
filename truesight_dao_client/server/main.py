@@ -14,6 +14,7 @@ meta_checkout / newsletter / email_agent / proxy / qr_code routers here.
 from __future__ import annotations
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from .. import __version__
 from .config import Settings, get_settings
@@ -49,6 +50,18 @@ def create_app() -> FastAPI:
         from bugsnag.asgi import BugsnagMiddleware
 
         app.add_middleware(BugsnagMiddleware)
+
+    # Mirror Edgar's global rack-cors (config/initializers/cors.rb): any origin, all methods,
+    # no credentials, 2h preflight cache. Required for the agroverse.shop browser `fetch` to
+    # /agroverse_shop/shipping_rates (PR4); harmless for the server-to-server routes.
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_methods=["*"],
+        allow_headers=["*"],
+        allow_credentials=False,
+        max_age=7200,
+    )
     app.include_router(health.router, tags=["health"])
     app.include_router(proxy.router, tags=["proxy"])
     app.include_router(tracking.router, tags=["tracking"])
