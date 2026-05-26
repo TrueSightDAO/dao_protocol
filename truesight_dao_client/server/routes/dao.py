@@ -1,13 +1,11 @@
 """`POST /dao/submit_contribution` — port of Rails `dao_controller#submit_contribution` (PR5b/PR5c).
 
 Flow: verify signature → (on success) dedup by Request-Transaction-ID + record to **Telegram Chat
-Logs** (synchronous, no-race) → dispatch immediate processing in the background → respond.
+Logs** (synchronous, no-race) → attachment→GitHub upload → `[EMAIL REGISTERED/VERIFICATION]`
+onboarding (422 on failure) → dispatch immediate processing in the background → respond.
 
-Always logs (even failed/no-signature submissions, matching Rails). Dispatch only on a verified
-signature. `[EMAIL REGISTERED/VERIFICATION]` onboarding (DaoEmailRegistrationService) is NOT yet
-ported — those use the OAuth-loopback flow (operator-machine-bound) and are a follow-up; this
-intake still logs + verifies them. Attachment→GitHub upload also deferred (responds
-`fileUploadedToGithub: false`).
+Always logs (even failed/no-signature submissions, matching Rails). Dispatch, attachment upload,
+and email onboarding only run on a verified signature.
 """
 
 from __future__ import annotations
@@ -17,7 +15,7 @@ import re
 from fastapi import APIRouter, BackgroundTasks, Request
 from fastapi.responses import JSONResponse
 
-from .. import dedup, dispatch
+from .. import dedup, dispatch, email_registration
 from ..crypto import verify
 from ..services import github_upload
 from ..sheets import telegram_raw_log
@@ -46,10 +44,11 @@ async def submit_contribution(request: Request, background: BackgroundTasks) -> 
 
     # --- verify ---
     signature_verification = "not_attempted"
+    verification_result = None
     if _has_signature_format(text):
         try:
-            result = verify.verify(text)
-            signature_verification = "success" if result.get("success") else "failed"
+            verification_result = verify.verify(text)
+            signature_verification = "success" if verification_result.get("success") else "failed"
         except verify.VerificationError:
             signature_verification = "error"
         except Exception:
@@ -81,6 +80,19 @@ async def submit_contribution(request: Request, background: BackgroundTasks) -> 
             )
         except Exception:
             file_uploaded = False
+
+    # --- email onboarding ([EMAIL REGISTERED] / [EMAIL VERIFICATION]) ---
+    if signature_verification == "success":
+        email_reg = email_registration.handle_after_successful_verify(text, verification_result)
+        if email_reg.get("applicable") and email_reg.get("ok") is False:
+            return JSONResponse({
+                "status": "error",
+                "error": email_reg.get("error") or "Email onboarding failed",
+                "fileUploadedToGithub": file_uploaded,
+                "googleSheetLogged": True,
+                "signature_verification": signature_verification,
+                "email_registration": email_reg,
+            }, status_code=422)
 
     # --- dispatch immediate processing (background; non-user-visible propagation) ---
     if signature_verification == "success":
