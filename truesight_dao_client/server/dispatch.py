@@ -14,7 +14,7 @@ from __future__ import annotations
 import logging
 import os
 
-from .jobs import webhook_trigger
+from .jobs import inventory_snapshot, webhook_trigger
 
 logger = logging.getLogger("dao_protocol.dispatch")
 
@@ -64,8 +64,8 @@ def dispatch_event(text: str) -> None:
                         action, env_key,
                     )
             if enqueue_inventory:
-                # Rails enqueues AgroverseInventorySnapshotPublishWorker (POST + secret, not a
-                # GET ?action=). Distinct shape → port pending; log so it's not silently dropped.
-                logger.info("asset-receipt: inventory-snapshot enqueue pending (see EDGAR_DAO_EXTRACTION_PLAN)")
+                # Rails enqueues AgroverseInventorySnapshotPublishWorker after a ledger webhook
+                # succeeds (refresh the public inventory JSON). It's a GET ?action=&token=.
+                inventory_snapshot.publish()
             return  # first-match-wins (Rails if/elsif)
     logger.info("dispatch: no event-tag routing matched")
