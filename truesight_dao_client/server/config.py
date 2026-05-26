@@ -65,6 +65,10 @@ class Settings(BaseSettings):
     email_verification_gas_webhook_url: str = ""
     email_verification_gas_secret: str = ""
 
+    # Bugsnag error tracking (DAO_PROTOCOL_BUGSNAG_API_KEY). Empty → SDK not loaded, no
+    # middleware, zero overhead. `release_stage` defaults to `environment` above.
+    bugsnag_api_key: str = ""
+
 
 @lru_cache
 def get_settings() -> Settings:

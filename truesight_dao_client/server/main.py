@@ -16,8 +16,23 @@ from __future__ import annotations
 from fastapi import FastAPI
 
 from .. import __version__
-from .config import get_settings
+from .config import Settings, get_settings
 from .routes import dao, health, proxy, qr_code_check, shipping, stripe_order_sync, tracking
+
+
+def _configure_bugsnag(settings: Settings) -> bool:
+    """Configure Bugsnag if an API key is set. Empty key → no-op (SDK not even imported)."""
+    if not settings.bugsnag_api_key:
+        return False
+    import bugsnag  # imported lazily so the package is only required when a key is set
+
+    bugsnag.configure(
+        api_key=settings.bugsnag_api_key,
+        release_stage=settings.environment,
+        app_version=__version__,
+        project_root="/home/ubuntu/dao_protocol",
+    )
+    return True
 
 
 def create_app() -> FastAPI:
@@ -30,6 +45,10 @@ def create_app() -> FastAPI:
             "app. See agentic_ai_context/EDGAR_DAO_EXTRACTION_PLAN.md."
         ),
     )
+    if _configure_bugsnag(settings):
+        from bugsnag.asgi import BugsnagMiddleware
+
+        app.add_middleware(BugsnagMiddleware)
     app.include_router(health.router, tags=["health"])
     app.include_router(proxy.router, tags=["proxy"])
     app.include_router(tracking.router, tags=["tracking"])
