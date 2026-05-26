@@ -51,6 +51,20 @@ class Settings(BaseSettings):
     google_sa_json_qr_lookup: str = "/home/ubuntu/sentiment_importer/config/cypher_defense_gdrive_key.json"
     google_sa_json_qr_sales: str = "/home/ubuntu/sentiment_importer/config/agroverse_qr_code_gdrive_key.json"
 
+    # GitHub PAT for /dao attachment uploads to TrueSightDAO repos (DAO_PROTOCOL_GITHUB_PAT).
+    github_pat: str = ""
+
+    # Agroverse inventory-snapshot GAS (ASSET RECEIPT dispatch → refresh inventory JSON). GET
+    # ?action=&token=. From DAO_PROTOCOL_AGROVERSE_INVENTORY_{GAS_WEBAPP_URL,PUBLISH_SECRET,GAS_ACTION}.
+    agroverse_inventory_gas_webapp_url: str = ""
+    agroverse_inventory_publish_secret: str = ""
+    agroverse_inventory_gas_action: str = "recalculateAndPublishInventory"
+
+    # Email-onboarding GAS mailer ([EMAIL REGISTERED] → sendEmailVerification). From
+    # DAO_PROTOCOL_EMAIL_VERIFICATION_{GAS_WEBHOOK_URL,GAS_SECRET}.
+    email_verification_gas_webhook_url: str = ""
+    email_verification_gas_secret: str = ""
+
 
 @lru_cache
 def get_settings() -> Settings:

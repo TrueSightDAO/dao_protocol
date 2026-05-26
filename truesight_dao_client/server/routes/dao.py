@@ -19,6 +19,7 @@ from fastapi.responses import JSONResponse
 
 from .. import dedup, dispatch
 from ..crypto import verify
+from ..services import github_upload
 from ..sheets import telegram_raw_log
 
 router = APIRouter()
@@ -41,6 +42,7 @@ def _extract_tx_sig(text: str) -> str | None:
 async def submit_contribution(request: Request, background: BackgroundTasks) -> JSONResponse:
     form = await request.form()
     text = str(form.get("text") or "").strip()
+    attachment = form.get("attachment")
 
     # --- verify ---
     signature_verification = "not_attempted"
@@ -69,13 +71,24 @@ async def submit_contribution(request: Request, background: BackgroundTasks) -> 
     telegram_raw_log.add_record(text or "[No Text Provided]",
                                 signature_verification=signature_verification)
 
+    # --- attachment → GitHub upload (when text references a github.com blob/tree URL) ---
+    file_uploaded = False
+    if attachment is not None and hasattr(attachment, "read"):
+        try:
+            file_bytes = await attachment.read()
+            file_uploaded = github_upload.upload_if_referenced(
+                text, file_bytes, getattr(attachment, "filename", None)
+            )
+        except Exception:
+            file_uploaded = False
+
     # --- dispatch immediate processing (background; non-user-visible propagation) ---
     if signature_verification == "success":
         background.add_task(dispatch.dispatch_event, text)
 
     return JSONResponse({
         "status": "success",
-        "fileUploadedToGithub": False,
+        "fileUploadedToGithub": file_uploaded,
         "googleSheetLogged": True,
         "signature_verification": signature_verification,
     })
