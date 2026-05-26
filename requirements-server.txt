@@ -13,3 +13,4 @@ google-auth>=2.23.0
 easypost>=8.0.0
 python-multipart>=0.0.6
 stripe>=7.0.0
+bugsnag>=4.7.0
