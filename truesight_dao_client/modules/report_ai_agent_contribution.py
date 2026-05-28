@@ -17,8 +17,14 @@ import argparse
 import os
 import re
 import sys
+from pathlib import Path
 
-from ..edgar_client import EdgarClient
+from ..edgar_client import (
+    EdgarClient,
+    ATTACHMENT_REPO_BASE_URL,
+    _ATTACHED_FILENAME_LABEL,
+    _generate_attachment_filename,
+)
 from .report_contribution import VALID_CONTRIBUTION_TYPES, _validate_contribution_type
 
 DEFAULT_GEN = (
@@ -126,6 +132,17 @@ def main(argv: list[str] | None = None) -> int:
         default=DEFAULT_GEN,
         help="This submission was generated using … (default: agentic_ai_context convention doc).",
     )
+    p.add_argument(
+        "--attachment",
+        default=None,
+        metavar="FILE",
+        help="Local file to attach (e.g. invoice PDF). Sent as multipart alongside the signed event.",
+    )
+    p.add_argument(
+        "--attached-filename",
+        default=None,
+        help="Sets 'Attached Filename' in the payload. Auto-generated from attachment if not provided.",
+    )
     p.add_argument("--dry-run", action="store_true", help="Print signed share text; do not POST.")
     args = p.parse_args(argv)
 
@@ -187,9 +204,19 @@ def main(argv: list[str] | None = None) -> int:
         ("Description", description),
         ("Contributor(s)", contributors),
         ("TDG Issued", tdg_issued),
-        ("Attached Filename", "N/A"),
-        ("Destination Contribution File Location", "N/A"),
     ]
+
+    if args.attachment:
+        original_filename = Path(args.attachment).name
+        if args.attached_filename:
+            attached_name = args.attached_filename
+        else:
+            attached_name = _generate_attachment_filename(event_name, client.email, original_filename)
+        attrs.append((_ATTACHED_FILENAME_LABEL, attached_name))
+        attrs.append(("Destination Contribution File Location", ATTACHMENT_REPO_BASE_URL + attached_name))
+    else:
+        attrs.append((_ATTACHED_FILENAME_LABEL, args.attached_filename or "N/A"))
+        attrs.append(("Destination Contribution File Location", "N/A"))
 
     event_name = "CONTRIBUTION EVENT"
     if args.dry_run:
@@ -197,7 +224,7 @@ def main(argv: list[str] | None = None) -> int:
         print(share_text)
         return 0
 
-    resp = client.submit(event_name, attrs)
+    resp = client.submit(event_name, attrs, attached_file_path=args.attachment)
     print(f"HTTP {resp.status_code}")
     try:
         import json
