@@ -1,12 +1,22 @@
 #!/usr/bin/env bash
-# Deploy the dao_protocol FastAPI service to the Edgar app box (seni_ror_new).
+# Deploy the dao_protocol FastAPI service to the standalone NELANCO box
+# (dao_protocol_nelanco).
 #
-# Topology (see agentic_ai_context/EDGAR_DAO_EXTRACTION_PLAN.md):
-#   krake_ng      — nginx reverse proxy (SEPARATE box, SSH :2202); fronts edgar.truesight.me
-#   seni_ror_new  — Edgar Rails app box; this service runs here on :8010 (systemd unit
-#                   truesight-dao-protocol), alongside Rails on :3002
+# Topology (since 2026-05-28 NELANCO cutover; see
+# sentiment_importer/NELANCO_ARCHITECTURE.md):
+#   seni_ror              — Edgar Rails app box (NELANCO 54.211.179.126); its
+#                            nginx proxies /proxy/gas/* across the VPC to:
+#   dao_protocol_nelanco  — standalone NELANCO box (98.93.94.86) running this
+#                            service on :8010 (systemd unit
+#                            truesight-dao-protocol). Private IP 172.31.23.207
+#                            is what seni_ror's nginx points at — same VPC,
+#                            same SG, default self-ingress allows :8010.
 #
-# First-time setup on seni_ror_new (run once, manually):
+# History: before 2026-05-28 this service was co-hosted with Rails on EXPLORYA
+# `seni_ror_new` (3.90.179.151, now stopped) via 127.0.0.1:8010 upstream.
+# The cutover split it onto its own box so the cost lands on NELANCO.
+#
+# First-time setup on dao_protocol_nelanco (run once, manually):
 #   git clone https://github.com/TrueSightDAO/dao_protocol.git /home/ubuntu/dao_protocol
 #   cd /home/ubuntu/dao_protocol && python3 -m venv .venv
 #   sudo cp truesight_dao_client/server/deploy/truesight-dao-protocol.service /etc/systemd/system/
@@ -14,15 +24,17 @@
 #   # then run this script for the install + start
 #
 # Usage:
-#   ./deploy.sh                 # git pull + pip install + restart
-#   SSH_HOST=seni_ror_new ./deploy.sh
+#   ./deploy.sh                          # git pull + pip install + restart
+#   SSH_HOST=dao_protocol_nelanco ./deploy.sh
 #
-# The nginx location flip on krake_ng is a SEPARATE, manual step (sensitive,
-# shared proxy) — not done here. See the plan doc.
+# The nginx upstream block on seni_ror (edgar.truesight.me's web tier) is a
+# separate, manual step — not done here. The block lives at
+# /etc/nginx/sites-available/edgar.conf and proxies /proxy/gas/* to
+# 172.31.23.207:8010 across the VPC.
 
 set -euo pipefail
 
-SSH_HOST=${SSH_HOST:-seni_ror_new}
+SSH_HOST=${SSH_HOST:-dao_protocol_nelanco}
 APP_DIR=${APP_DIR:-/home/ubuntu/dao_protocol}
 UNIT=truesight-dao-protocol
 PORT=${PORT:-8010}

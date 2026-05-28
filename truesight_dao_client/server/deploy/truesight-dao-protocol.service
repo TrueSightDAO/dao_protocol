@@ -1,10 +1,13 @@
 # systemd unit for the dao_protocol FastAPI service.
-# Install on seni_ror_new (the Edgar app box):
+# Install on dao_protocol_nelanco (standalone NELANCO box; was co-hosted with
+# Rails on EXPLORYA seni_ror_new before the 2026-05-28 cutover):
 #   sudo cp truesight-dao-protocol.service /etc/systemd/system/
 #   sudo systemctl daemon-reload && sudo systemctl enable --now truesight-dao-protocol
 #
-# Runs uvicorn on :8010. The shared nginx box (krake_ng) reverse-proxies the
-# DAO/Agroverse paths here; everything else stays on Rails (:3002).
+# Runs uvicorn on :8010. The Edgar Rails box (seni_ror, NELANCO 54.211.179.126)
+# has its own nginx that reverse-proxies /proxy/gas/* across the VPC to this
+# host at private IP 172.31.23.207:8010. Same VPC, same SG, default
+# self-ingress allows :8010 cross-instance — no SG rule needed.
 # Assumes a venv at /home/ubuntu/dao_protocol/.venv (created by deploy.sh) and
 # secrets in /home/ubuntu/dao_protocol/.env (chmod 600).
 
