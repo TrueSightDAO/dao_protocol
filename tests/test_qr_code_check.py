@@ -72,19 +72,35 @@ def _paid_session(qr="QR1"):
     )
 
 
-def test_session_reconcile_marks_sold(monkeypatch):
+def test_session_reconcile_marks_sold_and_enqueues_inventory_snapshot(monkeypatch):
     monkeypatch.setattr(qr_code_lookup, "lookup", lambda c: _MINTED)
     monkeypatch.setattr(stripe_client, "retrieve_session_with_charges", lambda sid: _paid_session())
     monkeypatch.setattr(stripe_client, "retrieve_balance_transaction", lambda bt: SimpleNamespace(fee=30))
     monkeypatch.setattr(qr_code_sales, "already_recorded", lambda c: False)
-    rec = {}
+    rec = {}; snapped = {"n": 0}
     monkeypatch.setattr(qr_code_sales, "mark_sold_and_record",
                         lambda *a, **k: rec.update(args=a) or {"ok": True})
+    monkeypatch.setattr(route.inventory_snapshot, "publish",
+                        lambda: snapped.update(n=snapped["n"] + 1) or True)
     r = client.get("/qr-code-check?qr_code=QR1&session_id=cs_test_1")
     assert r.status_code == 302
     assert "status=SOLD" in r.headers["location"]
     # net = (2500-30)/100 = 24.7, fee=0.3, total=25.0 → passed positionally
     assert rec["args"][2] == 24.7 and rec["args"][4] == 25.0
+    assert snapped["n"] == 1, "inventory snapshot must be enqueued after a successful reconcile (Rails parity)"
+
+
+def test_session_reconcile_succeeds_when_inventory_snapshot_raises(monkeypatch):
+    # The snapshot enqueue is best-effort: a failure must not break the SOLD redirect.
+    monkeypatch.setattr(qr_code_lookup, "lookup", lambda c: _MINTED)
+    monkeypatch.setattr(stripe_client, "retrieve_session_with_charges", lambda sid: _paid_session())
+    monkeypatch.setattr(stripe_client, "retrieve_balance_transaction", lambda bt: SimpleNamespace(fee=30))
+    monkeypatch.setattr(qr_code_sales, "already_recorded", lambda c: False)
+    monkeypatch.setattr(qr_code_sales, "mark_sold_and_record", lambda *a, **k: {"ok": True})
+    def boom(): raise RuntimeError("GAS down")
+    monkeypatch.setattr(route.inventory_snapshot, "publish", boom)
+    r = client.get("/qr-code-check?qr_code=QR1&session_id=cs_test_1")
+    assert r.status_code == 302 and "status=SOLD" in r.headers["location"]
 
 
 def test_session_unpaid_is_400(monkeypatch):

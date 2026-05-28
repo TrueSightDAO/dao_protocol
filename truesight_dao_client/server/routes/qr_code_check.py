@@ -22,6 +22,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 
 from ..config import get_settings
+from ..jobs import inventory_snapshot
 from ..sheets import base, qr_code_lookup, qr_code_sales
 from ..services import stripe_client
 
@@ -153,7 +154,14 @@ def _reconcile(qr_code: str, session_id: str, result: dict) -> object:
                                              result.get("Currency") or "Unknown", session_id, sales_date)
     if not rec.get("ok"):
         return JSONResponse({"error": rec.get("error", "Failed to record sale")}, status_code=400)
-    logger.info("qr sale recorded: %s (inventory-snapshot enqueue pending)", qr_code)
+    # Mirror Rails: enqueue the inventory snapshot refresh after recording the sale
+    # (port of AgroverseInventorySnapshotPublishWorker.perform_async). Best-effort —
+    # no-ops cleanly today if the GAS PUBLISH_SECRET property is unset.
+    try:
+        inventory_snapshot.publish()
+    except Exception as exc:
+        logger.warning("inventory snapshot enqueue failed after qr sale %s: %s", qr_code, exc)
+    logger.info("qr sale recorded: %s", qr_code)
     return _redirect_with_utm(result["landing_page"], qr_code, result.get("Currency") or "Product", "SOLD")
 
 
