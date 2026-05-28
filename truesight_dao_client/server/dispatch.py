@@ -21,13 +21,17 @@ logger = logging.getLogger("dao_protocol.dispatch")
 # Ordered: (event-tag or tuple-of-tags, [(env_key, action), …], enqueue_inventory_snapshot).
 # First matching entry wins. Mirrors dao_controller#trigger_immediate_processing exactly.
 ROUTING: list = [
+    # Inventory snapshot fires on these three too — Rails sets enqueue_agroverse_inventory_snapshot:
+    # true on SALES_AGL4, SALES_NON_AGL4, INVENTORY_PROCESSING, EXPENSE_PROCESSING (collapsed here
+    # to one event-level enqueue, since the snapshot worker is unique:until_and_while_executing
+    # so stacked enqueues already coalesce to one publish on Rails).
     ("[SALES EVENT]", [
         ("SALES_PROCESSING", "parseTelegramChatLogs"),
         ("SALES_AGL4", "processTokenizedTransactions"),
         ("SALES_NON_AGL4", "processNonAgl4Transactions"),
-    ], False),
-    ("[INVENTORY MOVEMENT]", [("INVENTORY_PROCESSING", "processTelegramChatLogs")], False),
-    ("[DAO Inventory Expense Event]", [("EXPENSE_PROCESSING", "parseAndProcessTelegramLogs")], False),
+    ], True),
+    ("[INVENTORY MOVEMENT]", [("INVENTORY_PROCESSING", "processTelegramChatLogs")], True),
+    ("[DAO Inventory Expense Event]", [("EXPENSE_PROCESSING", "parseAndProcessTelegramLogs")], True),
     ("[QR CODE UPDATE EVENT]", [("QR_CODE_UPDATE", "processQrCodeUpdatesFromTelegramChatLogs")], False),
     ("[DAPP PERMISSION CHANGE EVENT]", [("DAPP_PERMISSION_CHANGE", "apply_permission_change")], False),
     ("[WARMUP SEND EVENT]", [("WARMUP_SEND", "apply_warmup_send")], False),
