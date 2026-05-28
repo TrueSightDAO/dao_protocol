@@ -3,8 +3,12 @@ VERIFICATION]` after a verified `/dao` submission. REGISTERED → append a VERIF
 send the GAS verification email; VERIFICATION → single-use consume (VERIFYING→ACTIVE).
 Runs synchronously; returns a structured dict (`applicable`/`ok`/`event`/…) for the response.
 
-Note: the Rails `refresh_dao_members_cache!` fan-out after activation is NOT ported (best-effort
-cache warm; flagged as a minor follow-up) — activation itself is complete on the sheet.
+After a successful `consume_verification` we also fire the GAS `refresh_dao_members_cache` action
+(the same publisher as the verification mailer — Rails' `DaoMembersCacheRefreshWorker`). Without
+this, the sheet shows ACTIVE but the dapp's "is registered" check (which reads the GitHub-raw
+`dao_members.json` cache) still says no, so a freshly-verified user sees "digital signature not
+registered" right after clicking the verification link. Best-effort: cache failure is logged but
+does not fail the response — activation itself is complete on the sheet.
 """
 
 from __future__ import annotations
@@ -95,7 +99,11 @@ def _process_verification(text: str, vr: dict) -> dict:
     result = cds.consume_verification(pk, vk, email or None)
     outcome = result.get("outcome")
     if outcome == "activated":
-        return {"ok": True, "event": "EMAIL_VERIFICATION", "activated": True}
+        cache = _trigger_dao_members_cache_refresh()
+        if not cache.get("ok"):
+            logger.warning("dao_members cache refresh failed after activation: %s", cache.get("error"))
+        return {"ok": True, "event": "EMAIL_VERIFICATION", "activated": True,
+                "cache_refresh": bool(cache.get("ok"))}
     if outcome == "already_consumed_same_key":
         return {"ok": True, "event": "EMAIL_VERIFICATION", "activated": False, "already_consumed": True}
     if outcome == "pubkey_mismatch":
@@ -116,6 +124,27 @@ def _gas_json_ok(resp) -> bool:
         return isinstance(parsed, dict) and parsed.get("ok") is True
     except Exception:
         return False
+
+
+def _trigger_dao_members_cache_refresh() -> dict:
+    """Port of Rails `DaoMembersCacheRefreshWorker` — reuses the email-verification GAS publisher
+    (same Apps Script project) with `action=refresh_dao_members_cache`. Best-effort: caller logs
+    failures and proceeds (activation on the sheet is independent)."""
+    s = get_settings()
+    url = (s.email_verification_gas_webhook_url or "").strip()
+    secret = (s.email_verification_gas_secret or "").strip()
+    if not url or not secret:
+        return {"ok": False, "error": "EMAIL_VERIFICATION_GAS_WEBHOOK_URL / SECRET not set on the server."}
+    headers = {"User-Agent": "TrueSight-dao_protocol/DaoMembersCacheRefresh"}
+    try:
+        resp = requests.get(url.rstrip("/"),
+                            params={"action": "refresh_dao_members_cache", "secret": secret},
+                            timeout=60, headers=headers, allow_redirects=True)
+        if _gas_json_ok(resp):
+            return {"ok": True}
+        return {"ok": False, "error": f"GAS cache refresh HTTP {resp.status_code}"}
+    except requests.RequestException as exc:
+        return {"ok": False, "error": str(exc)}
 
 
 def _trigger_verification_email(email: str, verification_key: str, return_url: str | None) -> dict:
