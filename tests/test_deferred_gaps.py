@@ -44,6 +44,26 @@ def test_asset_receipt_triggers_inventory(monkeypatch):
     assert called.get("p") is True
 
 
+def test_sales_inventory_expense_events_trigger_inventory_snapshot(monkeypatch):
+    # Rails sets enqueue_agroverse_inventory_snapshot:true on SALES_AGL4/NON_AGL4,
+    # INVENTORY_PROCESSING, EXPENSE_PROCESSING. Python collapses to one event-level enqueue.
+    for tag in ("[SALES EVENT]", "[INVENTORY MOVEMENT]", "[DAO Inventory Expense Event]"):
+        called = {}
+        monkeypatch.setattr(dispatch.inventory_snapshot, "publish", lambda: called.update(p=True))
+        monkeypatch.setattr(dispatch.webhook_trigger, "trigger", lambda *a, **k: True)
+        dispatch.dispatch_event(tag + "\n- x: y")
+        assert called.get("p") is True, f"{tag} must fire the inventory snapshot enqueue"
+
+
+def test_non_inventory_event_does_not_trigger_snapshot(monkeypatch):
+    # An event with no inventory implication must NOT enqueue the snapshot.
+    called = {}
+    monkeypatch.setattr(dispatch.inventory_snapshot, "publish", lambda: called.update(p=True))
+    monkeypatch.setattr(dispatch.webhook_trigger, "trigger", lambda *a, **k: True)
+    dispatch.dispatch_event("[CREDENTIALING ATTESTATION EVENT]\n- x: y")
+    assert called.get("p") is None
+
+
 # --- github upload ---
 def _settings_pat(pat="testpat"):
     return SimpleNamespace(github_pat=pat)
