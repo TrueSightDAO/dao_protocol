@@ -51,12 +51,25 @@ def test_registration_missing_email_fails(monkeypatch):
     assert out["ok"] is False and "email" in out["error"].lower()
 
 
-def test_verification_activated(monkeypatch):
+def test_verification_activated_triggers_cache_refresh(monkeypatch):
     monkeypatch.setattr(cds, "normalize_public_key", lambda v: "PK1")
     monkeypatch.setattr(cds, "normalize_verification_key", lambda v: "VK123")
     monkeypatch.setattr(cds, "consume_verification", lambda pk, vk, email=None: {"outcome": "activated", "row": 9})
+    called = {"n": 0}
+    monkeypatch.setattr(er, "_trigger_dao_members_cache_refresh", lambda: called.update(n=called["n"] + 1) or {"ok": True})
     out = er.handle_after_successful_verify(VER, VR)
-    assert out["ok"] and out["activated"] is True
+    assert out["ok"] and out["activated"] is True and out["cache_refresh"] is True
+    assert called["n"] == 1, "cache refresh must fire after a successful activation"
+
+
+def test_verification_activated_when_cache_refresh_fails_still_succeeds(monkeypatch):
+    # cache refresh is best-effort: activation is what matters
+    monkeypatch.setattr(cds, "normalize_public_key", lambda v: "PK1")
+    monkeypatch.setattr(cds, "normalize_verification_key", lambda v: "VK123")
+    monkeypatch.setattr(cds, "consume_verification", lambda pk, vk, email=None: {"outcome": "activated", "row": 9})
+    monkeypatch.setattr(er, "_trigger_dao_members_cache_refresh", lambda: {"ok": False, "error": "GAS down"})
+    out = er.handle_after_successful_verify(VER, VR)
+    assert out["ok"] and out["activated"] is True and out["cache_refresh"] is False
 
 
 def test_verification_pubkey_mismatch(monkeypatch):
