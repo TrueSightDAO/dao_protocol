@@ -288,6 +288,7 @@ Every event follows the same submission protocol. Below is the complete catalog.
 | `[EMAIL VERIFICATION EVENT]` | Complete key registration | Verification Key, Email | `create_signature.html` |
 | `[CONTRIBUTOR ADD EVENT]` | Add a new DAO contributor | Name, Email, Role | Onboarding flow |
 | `[CREDENTIALING ATTESTATION EVENT]` | Issue a lineage credential | Program, Attestor, Attestee, Credential Type | Credentialing UI |
+| `[PRACTICE EVENT]` | Log a capoeira training session (Tribo Bahia Mirim) | Program, Practice Type, Practitioner Public Key, Moves Practiced, Total Practice Minutes | `capoeira.agroverse.shop/practice.html` |
 
 ### Outreach & Field Reports
 
@@ -412,6 +413,7 @@ Sidekiq worker → POST GAS webhook URL
 | `[PARTNER CHECK-IN EVENT]` | Parse → Partner Check-ins on Main Ledger |
 | `[ASSET RECEIPT EVENT]` | Parse → Currencies + Offchain Transactions |
 | `[CREDENTIALING ATTESTATION EVENT]` | Parse → lineage-credentials commit + program roster back-fill |
+| `[PRACTICE EVENT]` | Parse → lineage-credentials commit (capoeira-tribo-mirim program) + CV record |
 
 ### 6.3 Race Condition Prevention
 
@@ -457,7 +459,17 @@ Key files:
 - Signing with RSASSA-PKCS1-v1_5 / SHA-256
 - Multipart form submission to Edgar
 
-### 7.4 Public Data Caches
+### 7.4 Capoeira Practice Platform
+
+The capoeira practice platform at `capoeira.agroverse.shop` demonstrates anonymous keypair generation and `[PRACTICE EVENT]` submission without email registration — the keypair is generated client-side and stored in localStorage, and the practitioner slug is derived from a SHA-256 hash of the public key.
+
+**Repository:** `github.com/TrueSightDAO/capoeira`
+
+Key files:
+- `assets/js/practice-event-submit.js` — key generation, payload building, signing, and Edgar submission
+- `practice.html` — session generator and practice flow UI
+
+### 7.5 Public Data Caches
 
 The DAO publishes pre-computed JSON snapshots for fast read access:
 
@@ -478,5 +490,6 @@ The DAO publishes pre-computed JSON snapshots for fast read access:
 - **Edgar Endpoint:** `https://edgar.truesight.me`
 - **DApp (Beta):** `https://beta.dapp.truesight.me`
 - **DApp (Production):** `https://dapp.truesight.me`
+- **Capoeira Practice:** `https://capoeira.agroverse.shop/practice.html`
 
 For integration questions, open an issue on the `dao_protocol` or `documentation` repository.
