@@ -287,7 +287,7 @@ Every event follows the same submission protocol. Below is the complete catalog.
 | `[EMAIL REGISTERED EVENT]` | Begin key registration | Email, Generation Source URL | `create_signature.html` |
 | `[EMAIL VERIFICATION EVENT]` | Complete key registration | Verification Key, Email | `create_signature.html` |
 | `[CONTRIBUTOR ADD EVENT]` | Add a new DAO contributor | Name, Email, Role | Onboarding flow |
-| `[CREDENTIALING ATTESTATION EVENT]` | Issue a lineage credential | Program, Attestor, Attestee, Credential Type | Credentialing UI |
+| `[CREDENTIALING ATTESTATION EVENT]` | Issue a lineage credential | Program, Attestor, Attestee, Credential Type | `butterfly-effect-club admin panel`, `Credentialing UI` |
 | `[PRACTICE EVENT]` | Log a capoeira training session (Tribo Bahia Mirim) | Program, Practice Type, Practitioner Public Key, Moves Practiced, Total Practice Minutes | `capoeira.agroverse.shop/practice.html` |
 
 ### Outreach & Field Reports
@@ -469,7 +469,25 @@ Key files:
 - `assets/js/practice-event-submit.js` — key generation, payload building, signing, and Edgar submission
 - `practice.html` — session generator and practice flow UI
 
-### 7.5 Public Data Caches
+### 7.5 Butterfly Effect Club Admin Console
+
+The admin console at `butterfly-effect-club.truesight.me` is the reference implementation for `[CREDENTIALING ATTESTATION EVENT]`. It demonstrates the full credentialing attestation flow: admin sign-in via email verification, cohort roster loading, and one-click attestation that generates an attestee keypair, builds the signed attestation payload, and submits it to Edgar.
+
+**Repository:** `github.com/TrueSightDAO/butterfly-effect-club`
+
+Key files:
+- `index.html` — admin console with sign-in, queue management, and attestation submission
+- `config.json` — program bootstrap configuration
+- `SCHEMA.md` — ERA sheet schema and attestation event field reference
+- `PROPOSAL.md` — architecture and design decisions
+
+The attestation payload includes:
+- Program slug, attestation type, attestor/attestee public keys
+- Roster source URL and row number for audit trail
+- Config and schema URLs for program validation
+- JSON payload with school, learner type, and graduation date
+
+### 7.6 Public Data Caches
 
 The DAO publishes pre-computed JSON snapshots for fast read access:
 
@@ -491,5 +509,6 @@ The DAO publishes pre-computed JSON snapshots for fast read access:
 - **DApp (Beta):** `https://beta.dapp.truesight.me`
 - **DApp (Production):** `https://dapp.truesight.me`
 - **Capoeira Practice:** `https://capoeira.agroverse.shop/practice.html`
+- **Butterfly Effect Club Admin:** `https://butterfly-effect-club.truesight.me`
 
 For integration questions, open an issue on the `dao_protocol` or `documentation` repository.
