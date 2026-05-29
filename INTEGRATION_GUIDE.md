@@ -459,7 +459,17 @@ Key files:
 - Signing with RSASSA-PKCS1-v1_5 / SHA-256
 - Multipart form submission to Edgar
 
-### 7.4 Public Data Caches
+### 7.4 Capoeira Practice Platform
+
+The capoeira practice platform at `capoeira.agroverse.shop` demonstrates anonymous keypair generation and `[PRACTICE EVENT]` submission without email registration — the keypair is generated client-side and stored in localStorage, and the practitioner slug is derived from a SHA-256 hash of the public key.
+
+**Repository:** `github.com/TrueSightDAO/capoeira`
+
+Key files:
+- `assets/js/practice-event-submit.js` — key generation, payload building, signing, and Edgar submission
+- `practice.html` — session generator and practice flow UI
+
+### 7.5 Public Data Caches
 
 The DAO publishes pre-computed JSON snapshots for fast read access:
 
