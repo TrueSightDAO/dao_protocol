@@ -288,6 +288,7 @@ Every event follows the same submission protocol. Below is the complete catalog.
 | `[EMAIL VERIFICATION EVENT]` | Complete key registration | Verification Key, Email | `create_signature.html` |
 | `[CONTRIBUTOR ADD EVENT]` | Add a new DAO contributor | Name, Email, Role | Onboarding flow |
 | `[CREDENTIALING ATTESTATION EVENT]` | Issue a lineage credential | Program, Attestor, Attestee, Credential Type | Credentialing UI |
+| `[PRACTICE EVENT]` | Log a capoeira training session (Tribo Bahia Mirim) | Program, Practice Type, Practitioner Public Key, Moves Practiced, Total Practice Minutes | `capoeira.agroverse.shop/practice.html` |
 
 ### Outreach & Field Reports
 
