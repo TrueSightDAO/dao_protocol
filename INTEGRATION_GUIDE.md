@@ -509,5 +509,6 @@ The DAO publishes pre-computed JSON snapshots for fast read access:
 - **DApp (Beta):** `https://beta.dapp.truesight.me`
 - **DApp (Production):** `https://dapp.truesight.me`
 - **Capoeira Practice:** `https://capoeira.agroverse.shop/practice.html`
+- **Butterfly Effect Club Admin:** `https://butterfly-effect-club.truesight.me`
 
 For integration questions, open an issue on the `dao_protocol` or `documentation` repository.
