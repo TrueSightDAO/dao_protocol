@@ -490,5 +490,6 @@ The DAO publishes pre-computed JSON snapshots for fast read access:
 - **Edgar Endpoint:** `https://edgar.truesight.me`
 - **DApp (Beta):** `https://beta.dapp.truesight.me`
 - **DApp (Production):** `https://dapp.truesight.me`
+- **Capoeira Practice:** `https://capoeira.agroverse.shop/practice.html`
 
 For integration questions, open an issue on the `dao_protocol` or `documentation` repository.
