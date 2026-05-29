@@ -8,9 +8,49 @@ GAS shared secrets (kept here so there is one typed place to add them).
 
 from __future__ import annotations
 
+import os
 from functools import lru_cache
+from pathlib import Path
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Where the service-account JSONs were first provisioned: the Edgar web box.
+# Kept as the final fallback so existing seni_ror deploys keep resolving even
+# without any creds-dir configuration.
+_LEGACY_CREDS_DIR = "/home/ubuntu/sentiment_importer/config"
+
+# Other hosts that run this server keep the SAME filenames under a DIFFERENT
+# directory (the autopilot EC2 ships them under config/google). We probe these
+# in order so the server "just works" wherever it is deployed, instead of
+# raising FileNotFoundError on a path that only exists on the Edgar box.
+_BUILTIN_CREDS_DIRS = (
+    "/opt/truesight_autopilot/config/google",
+    _LEGACY_CREDS_DIR,
+)
+
+# Field name -> credential filename. The filename is stable across hosts; only
+# the containing directory changes, which is what we resolve below.
+_SA_FILENAMES = {
+    "google_sa_json": "edgar_dapp_listener_key.json",
+    "google_sa_json_qr_lookup": "cypher_defense_gdrive_key.json",
+    "google_sa_json_qr_sales": "agroverse_qr_code_gdrive_key.json",
+}
+
+
+def _resolve_sa_path(filename: str, creds_dirs: list[str]) -> str:
+    """Return the first ``{dir}/{filename}`` that exists.
+
+    If none exist, fall back to the legacy Edgar-box path so error messages name
+    a concrete location rather than an empty string.
+    """
+    for d in creds_dirs:
+        if not d:
+            continue
+        candidate = Path(d) / filename
+        if candidate.is_file():
+            return str(candidate)
+    return str(Path(_LEGACY_CREDS_DIR) / filename)
 
 
 class Settings(BaseSettings):
@@ -34,10 +74,22 @@ class Settings(BaseSettings):
 
     log_level: str = "info"
 
-    # Service-account JSON for Google Sheets writes (newsletter/email-agent tracking, etc.).
-    # On seni_ror_new this defaults to the same key Edgar's Rails app already uses, so no new
-    # credential needs provisioning. Override with DAO_PROTOCOL_GOOGLE_SA_JSON.
-    google_sa_json: str = "/home/ubuntu/sentiment_importer/config/edgar_dapp_listener_key.json"
+    # Directory holding the service-account JSONs. Honors the autopilot's
+    # ``GOOGLE_CREDS_DIR`` convention; ``DAO_PROTOCOL_GOOGLE_CREDS_DIR`` takes
+    # precedence. When set, ``{dir}/<key>.json`` is preferred over the built-in
+    # probe dirs. Leave empty to auto-resolve (see _resolve_google_sa_paths).
+    google_creds_dir: str = ""
+
+    # Service-account JSON paths. Leave UNSET to auto-resolve the filename from
+    # google_creds_dir → GOOGLE_CREDS_DIR → built-in dirs (autopilot, then the
+    # legacy Edgar box). Set DAO_PROTOCOL_GOOGLE_SA_JSON to pin an exact path
+    # verbatim (operator override wins over auto-resolution).
+    #   - google_sa_json          → Google Sheets writes (newsletter/email-agent tracking, etc.)
+    #   - google_sa_json_qr_lookup → QR-code lookup tab (different perms)
+    #   - google_sa_json_qr_sales  → QR-code sales tab (different perms)
+    google_sa_json: str = ""
+    google_sa_json_qr_lookup: str = ""
+    google_sa_json_qr_sales: str = ""
 
     # EasyPost API key for USPS shipping rate quotes (PR4). NOT hardcoded — set
     # DAO_PROTOCOL_EASYPOST_API_KEY in the box's .env (gitignored). Empty → rate calc returns [].
@@ -46,10 +98,6 @@ class Settings(BaseSettings):
     # Stripe secret key for the QR-code / meta-checkout flows (PR6). From DAO_PROTOCOL_STRIPE_SECRET_KEY
     # (box .env). Empty → MINTED-QR checkout returns an error (gate-off safe).
     stripe_secret_key: str = ""
-
-    # Service-account keys for the QR-code tabs (different perms than the tracking key).
-    google_sa_json_qr_lookup: str = "/home/ubuntu/sentiment_importer/config/cypher_defense_gdrive_key.json"
-    google_sa_json_qr_sales: str = "/home/ubuntu/sentiment_importer/config/agroverse_qr_code_gdrive_key.json"
 
     # GitHub PAT for /dao attachment uploads to TrueSightDAO repos (DAO_PROTOCOL_GITHUB_PAT).
     github_pat: str = ""
@@ -68,6 +116,28 @@ class Settings(BaseSettings):
     # Bugsnag error tracking (DAO_PROTOCOL_BUGSNAG_API_KEY). Empty → SDK not loaded, no
     # middleware, zero overhead. `release_stage` defaults to `environment` above.
     bugsnag_api_key: str = ""
+
+    @model_validator(mode="after")
+    def _resolve_google_sa_paths(self) -> "Settings":
+        """Fill any unset service-account path by locating its filename on disk.
+
+        Precedence per key: an explicit ``DAO_PROTOCOL_GOOGLE_SA_JSON*`` override
+        (respected verbatim) → ``google_creds_dir`` → ``GOOGLE_CREDS_DIR`` env →
+        built-in dirs (autopilot, then legacy Edgar box). This lets the same
+        server boot on the Edgar box, the autopilot EC2, or the dao_protocol host
+        without each one hardcoding a path that only exists somewhere else.
+        """
+        creds_dirs = [
+            self.google_creds_dir,
+            os.environ.get("GOOGLE_CREDS_DIR", ""),
+            *_BUILTIN_CREDS_DIRS,
+        ]
+        for field, filename in _SA_FILENAMES.items():
+            # An explicit, non-empty operator override is used as-is.
+            if field in self.model_fields_set and getattr(self, field):
+                continue
+            setattr(self, field, _resolve_sa_path(filename, creds_dirs))
+        return self
 
 
 @lru_cache

@@ -3,8 +3,10 @@
 Supports **multiple** service-account keys (different Edgar sheets use different keys — e.g. the
 QR-code tabs use `cypher_defense_gdrive_key.json` / `agroverse_qr_code_gdrive_key.json` while the
 tracking/telegram tabs use `edgar_dapp_listener_key.json`). Pass `key_path=` to pick the key;
-default is `DAO_PROTOCOL_GOOGLE_SA_JSON`. On `seni_ror_new` all keys live under
-`/home/ubuntu/sentiment_importer/config/`. Sheet access is best-effort at the call sites.
+default is `google_sa_json`. The key directory is resolved per-host by `config.py`
+(`google_creds_dir` / `GOOGLE_CREDS_DIR` → built-in dirs → legacy Edgar box), so the same
+filenames work on the Edgar box, the autopilot EC2, or the dao_protocol host. Sheet access is
+best-effort at the call sites.
 """
 
 from __future__ import annotations
