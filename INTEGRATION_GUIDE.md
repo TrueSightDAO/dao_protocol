@@ -469,7 +469,25 @@ Key files:
 - `assets/js/practice-event-submit.js` — key generation, payload building, signing, and Edgar submission
 - `practice.html` — session generator and practice flow UI
 
-### 7.5 Public Data Caches
+### 7.5 Butterfly Effect Club Admin Console
+
+The admin console at `butterfly-effect-club.truesight.me` is the reference implementation for `[CREDENTIALING ATTESTATION EVENT]`. It demonstrates the full credentialing attestation flow: admin sign-in via email verification, cohort roster loading, and one-click attestation that generates an attestee keypair, builds the signed attestation payload, and submits it to Edgar.
+
+**Repository:** `github.com/TrueSightDAO/butterfly-effect-club`
+
+Key files:
+- `index.html` — admin console with sign-in, queue management, and attestation submission
+- `config.json` — program bootstrap configuration
+- `SCHEMA.md` — ERA sheet schema and attestation event field reference
+- `PROPOSAL.md` — architecture and design decisions
+
+The attestation payload includes:
+- Program slug, attestation type, attestor/attestee public keys
+- Roster source URL and row number for audit trail
+- Config and schema URLs for program validation
+- JSON payload with school, learner type, and graduation date
+
+### 7.6 Public Data Caches
 
 The DAO publishes pre-computed JSON snapshots for fast read access:
 
