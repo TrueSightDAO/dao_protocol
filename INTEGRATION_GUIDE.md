@@ -413,6 +413,7 @@ Sidekiq worker → POST GAS webhook URL
 | `[PARTNER CHECK-IN EVENT]` | Parse → Partner Check-ins on Main Ledger |
 | `[ASSET RECEIPT EVENT]` | Parse → Currencies + Offchain Transactions |
 | `[CREDENTIALING ATTESTATION EVENT]` | Parse → lineage-credentials commit + program roster back-fill |
+| `[PRACTICE EVENT]` | Parse → lineage-credentials commit (capoeira-tribo-mirim program) + CV record |
 
 ### 6.3 Race Condition Prevention
 
