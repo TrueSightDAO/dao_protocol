@@ -1,3 +1,5 @@
+> 📖 **New to the DAO? Start with the [Integration Guide →](INTEGRATION_GUIDE.md)** — a developer-friendly overview of all Edgar protocols, event types, and the digital signature system.
+
 # dao_client
 
 Python client library + CLI for **TrueSight DAO**'s contribution server, **Edgar** ([`edgar.truesight.me`](https://edgar.truesight.me), source: [`TrueSightDAO/sentiment_importer`](https://github.com/TrueSightDAO/sentiment_importer)).
