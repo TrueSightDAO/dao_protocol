@@ -288,7 +288,7 @@ Every event follows the same submission protocol. Below is the complete catalog.
 | `[EMAIL VERIFICATION EVENT]` | Complete key registration | Verification Key, Email | `create_signature.html` |
 | `[CONTRIBUTOR ADD EVENT]` | Add a new DAO contributor | Name, Email, Role | Onboarding flow |
 | `[CREDENTIALING ATTESTATION EVENT]` | Issue a lineage credential | Program, Attestor, Attestee, Credential Type | `butterfly-effect-club admin panel`, `Credentialing UI` |
-| `[PRACTICE EVENT]` | Log a capoeira training session (Tribo Bahia Mirim) | Program, Practice Type, Practitioner Public Key, Moves Practiced, Total Practice Minutes | `capoeira.agroverse.shop/practice.html` |
+| `[PRACTICE EVENT]` | Log a capoeira training session (Tribo Bahia Mirim) — COPPA-compliant by design: no email or personal identification required, only the practitioner's public key | Program, Practice Type, Practitioner Public Key, Moves Practiced, Total Practice Minutes | `capoeira.agroverse.shop/practice.html` |
 
 ### Outreach & Field Reports
 
@@ -462,6 +462,8 @@ Key files:
 ### 7.4 Capoeira Practice Platform
 
 The capoeira practice platform at `capoeira.agroverse.shop` demonstrates anonymous keypair generation and `[PRACTICE EVENT]` submission without email registration — the keypair is generated client-side and stored in localStorage, and the practitioner slug is derived from a SHA-256 hash of the public key.
+
+**COPPA compliance:** The design is intentionally COPPA-compliant. The only identifying information about the practitioner is their public key. No email, no name, no personal data is collected or required. This allows minors to participate in practice tracking without violating children's privacy regulations.
 
 **Repository:** `github.com/TrueSightDAO/capoeira`
 
