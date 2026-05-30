@@ -463,6 +463,8 @@ Key files:
 
 The capoeira practice platform at `capoeira.agroverse.shop` demonstrates anonymous keypair generation and `[PRACTICE EVENT]` submission without email registration — the keypair is generated client-side and stored in localStorage, and the practitioner slug is derived from a SHA-256 hash of the public key.
 
+**COPPA compliance:** The design is intentionally COPPA-compliant. The only identifying information about the practitioner is their public key. No email, no name, no personal data is collected or required. This allows minors to participate in practice tracking without violating children's privacy regulations.
+
 **Repository:** `github.com/TrueSightDAO/capoeira`
 
 Key files:
