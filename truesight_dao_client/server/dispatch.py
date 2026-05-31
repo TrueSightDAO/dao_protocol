@@ -13,10 +13,19 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 
 from .jobs import inventory_snapshot, webhook_trigger
 
 logger = logging.getLogger("dao_protocol.dispatch")
+
+
+def _extract_field(text: str, label: str) -> str | None:
+    """Extract a field value from the submission text header (before the first -------- divider)."""
+    norm = re.sub(r"\r\n?", "\n", text or "")
+    header = norm.split("\n--------", 1)[0]
+    m = re.search(rf"(?im)^-\s*{re.escape(label)}:\s*(.+)$", header)
+    return m.group(1).strip() if m else None
 
 # Ordered: (event-tag or tuple-of-tags, [(env_key, action), …], enqueue_inventory_snapshot).
 # First matching entry wins. Mirrors dao_controller#trigger_immediate_processing exactly.
@@ -42,7 +51,10 @@ ROUTING: list = [
     ("[RETAIL FIELD REPORT EVENT]", [("RETAIL_FIELD_REPORT_PROCESSING", "processRetailFieldReportsFromTelegramChatLogs")], False),
     ("[STORE ADD EVENT]", [("STORE_ADD_PROCESSING", "processStoreAddsFromTelegramChatLogs")], False),
     ("[DONATION MINT EVENT]", [("DONATION_MINT_PROCESSING", "processDonationMintsFromTelegramChatLogs")], False),
-    ("[CONTRIBUTOR ADD EVENT]", [("CONTRIBUTOR_ADD_PROCESSING", "processContributorAddsFromTelegramChatLogs")], False),
+    ("[CONTRIBUTOR ADD EVENT]", [
+        ("CONTRIBUTOR_ADD_PROCESSING", "processContributorAddsFromTelegramChatLogs"),
+        ("ONBOARDING_INVITATION", "sendOnboardingInvitation"),
+    ], False),
     ("[CREDENTIALING ATTESTATION EVENT]", [("CREDENTIALING_ATTESTATION", "process_attestation_events")], False),
     ("[PARTNER CHECK-IN EVENT]", [("PARTNER_CHECK_IN_PROCESSING", "processPartnerCheckInsFromTelegramChatLogs")], False),
     ("[ASSET RECEIPT EVENT]", [("ASSET_RECEIPT_PROCESSING", "processAssetReceiptsFromTelegramChatLogs")], True),
@@ -60,13 +72,26 @@ def dispatch_event(text: str) -> None:
         if any(tag in text for tag in tag_tuple):
             for env_key, action in targets:
                 url = _webhook_url(env_key)
-                if url:
-                    webhook_trigger.trigger(url, action)
-                else:
+                if not url:
                     logger.warning(
                         "no webhook URL for %s (set DAO_PROTOCOL_WEBHOOK_%s) — GAS cron will process",
                         action, env_key,
                     )
+                    continue
+                # Onboarding invitation needs extra params beyond just ?action=
+                if env_key == "ONBOARDING_INVITATION":
+                    secret = os.environ.get("DAO_PROTOCOL_WEBHOOK_EMAIL_VERIFICATION_SECRET", "").strip()
+                    params = {
+                        "action": action,
+                        "secret": secret,
+                        "email": _extract_field(text, "Contributor Email") or "",
+                        "contributor_name": _extract_field(text, "Contributor Name") or "",
+                        "inviter_name": _extract_field(text, "Governor Name") or "",
+                        "inviter_email": _extract_field(text, "Governor Email") or "",
+                    }
+                    webhook_trigger.trigger_with_params(url, params, description=action)
+                else:
+                    webhook_trigger.trigger(url, action)
             if enqueue_inventory:
                 # Rails enqueues AgroverseInventorySnapshotPublishWorker after a ledger webhook
                 # succeeds (refresh the public inventory JSON). It's a GET ?action=&token=.
