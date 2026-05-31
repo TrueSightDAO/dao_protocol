@@ -51,7 +51,10 @@ ROUTING: list = [
     ("[RETAIL FIELD REPORT EVENT]", [("RETAIL_FIELD_REPORT_PROCESSING", "processRetailFieldReportsFromTelegramChatLogs")], False),
     ("[STORE ADD EVENT]", [("STORE_ADD_PROCESSING", "processStoreAddsFromTelegramChatLogs")], False),
     ("[DONATION MINT EVENT]", [("DONATION_MINT_PROCESSING", "processDonationMintsFromTelegramChatLogs")], False),
-    ("[CONTRIBUTOR ADD EVENT]", [("CONTRIBUTOR_ADD_PROCESSING", "processContributorAddsFromTelegramChatLogs")], False),
+    ("[CONTRIBUTOR ADD EVENT]", [
+        ("CONTRIBUTOR_ADD_PROCESSING", "processContributorAddsFromTelegramChatLogs"),
+        ("ONBOARDING_INVITATION", "sendOnboardingInvitation"),
+    ], False),
     ("[CREDENTIALING ATTESTATION EVENT]", [("CREDENTIALING_ATTESTATION", "process_attestation_events")], False),
     ("[PARTNER CHECK-IN EVENT]", [("PARTNER_CHECK_IN_PROCESSING", "processPartnerCheckInsFromTelegramChatLogs")], False),
     ("[ASSET RECEIPT EVENT]", [("ASSET_RECEIPT_PROCESSING", "processAssetReceiptsFromTelegramChatLogs")], True),
