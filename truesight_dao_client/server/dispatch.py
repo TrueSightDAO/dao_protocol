@@ -13,10 +13,19 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 
 from .jobs import inventory_snapshot, webhook_trigger
 
 logger = logging.getLogger("dao_protocol.dispatch")
+
+
+def _extract_field(text: str, label: str) -> str | None:
+    """Extract a field value from the submission text header (before the first -------- divider)."""
+    norm = re.sub(r"\r\n?", "\n", text or "")
+    header = norm.split("\n--------", 1)[0]
+    m = re.search(rf"(?im)^-\s*{re.escape(label)}:\s*(.+)$", header)
+    return m.group(1).strip() if m else None
 
 # Ordered: (event-tag or tuple-of-tags, [(env_key, action), …], enqueue_inventory_snapshot).
 # First matching entry wins. Mirrors dao_controller#trigger_immediate_processing exactly.
