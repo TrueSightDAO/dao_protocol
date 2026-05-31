@@ -72,13 +72,26 @@ def dispatch_event(text: str) -> None:
         if any(tag in text for tag in tag_tuple):
             for env_key, action in targets:
                 url = _webhook_url(env_key)
-                if url:
-                    webhook_trigger.trigger(url, action)
-                else:
+                if not url:
                     logger.warning(
                         "no webhook URL for %s (set DAO_PROTOCOL_WEBHOOK_%s) — GAS cron will process",
                         action, env_key,
                     )
+                    continue
+                # Onboarding invitation needs extra params beyond just ?action=
+                if env_key == "ONBOARDING_INVITATION":
+                    secret = os.environ.get("DAO_PROTOCOL_WEBHOOK_EMAIL_VERIFICATION_SECRET", "").strip()
+                    params = {
+                        "action": action,
+                        "secret": secret,
+                        "email": _extract_field(text, "Contributor Email") or "",
+                        "contributor_name": _extract_field(text, "Contributor Name") or "",
+                        "inviter_name": _extract_field(text, "Governor Name") or "",
+                        "inviter_email": _extract_field(text, "Governor Email") or "",
+                    }
+                    webhook_trigger.trigger_with_params(url, params, description=action)
+                else:
+                    webhook_trigger.trigger(url, action)
             if enqueue_inventory:
                 # Rails enqueues AgroverseInventorySnapshotPublishWorker after a ledger webhook
                 # succeeds (refresh the public inventory JSON). It's a GET ?action=&token=.
