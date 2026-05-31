@@ -36,3 +36,21 @@ def trigger(webhook_url: str, action: str, description: str | None = None) -> bo
             if attempt < _MAX_ATTEMPTS:
                 time.sleep(2 * attempt)
     return False
+
+
+def trigger_with_params(webhook_url: str, params: dict, description: str | None = None) -> bool:
+    """GET webhook_url with arbitrary query params. Same retry logic as trigger()."""
+    label = description or str(params)
+    for attempt in range(1, _MAX_ATTEMPTS + 1):
+        try:
+            resp = requests.get(webhook_url, params=params, timeout=_TIMEOUT)
+            if resp.ok:
+                logger.info("webhook ok: %s (%s)", label, webhook_url)
+                return True
+            logger.warning("webhook non-2xx %s: %s (%s) — cron fallback", resp.status_code, label, webhook_url)
+            return False
+        except requests.RequestException as exc:
+            logger.warning("webhook attempt %d/%d failed: %s — %s", attempt, _MAX_ATTEMPTS, label, exc)
+            if attempt < _MAX_ATTEMPTS:
+                time.sleep(2 * attempt)
+    return False
