@@ -1,0 +1,40 @@
+# Attestation → tree-planting manifest — ERA Professionals / Butterfly Effect Club.
+# First instance of the reusable template (agentic_ai_context/ERA_COHORT_TREE_ISSUANCE_PLAN.md).
+# Drives: truesight_dao_client.modules.link_attestations_to_trees (mint-only, idempotent).
+#
+#   python -m truesight_dao_client.modules.link_attestations_to_trees \
+#       --manifest examples/attestation-trees/butterfly-effect.yaml          # dry-run
+#       ... --execute                                                        # apply
+
+program_slug: butterfly-effect
+
+# Cohort Roster (Butterfly Effect Club - Cohorts workbook).
+roster_sheet_id: 1pApVCRqsDw9AjPUTc3fMUfMh-8H4Ne1HYuQ_d6xItog
+roster_tab: Cohort Roster
+audit_tab: Audit Trail
+
+# Program service account (read/write on the roster sheet). Relative paths resolve
+# from this manifest's directory. In CI (butterfly_effects_club) this is the
+# GOOGLE_APPLICATION_CREDENTIALS the workflow writes from a secret.
+sa_credentials: ../../../butterfly_effects_club/google_credentials.json
+
+# Dedicated per-program currency → BEC managed ledger (Currencies col F = .../sunmint/bec).
+currency: Butterfly Effect Club Tree Planting Pledge - QR Code
+price: 1
+
+# Shared cohort visual proof — the ERA $97 transfer receipt (a local file).
+# mint_donation uploads it per mint to github.com/TrueSightDAO/.github/assets/donations/
+# (unique object per QR via the pk_hash prefix). Fill with the real receipt path.
+proof_file: ~/Downloads/era_butterfly_effect_97_payment.pdf
+
+# A row is eligible when status == attested_status AND attestation_tx_id is set AND
+# pk_hash is set. Rows already carrying tree_qr_code are skipped (idempotent).
+attested_status: processed
+
+# Roster header → field mapping (defaults shown; override if a program differs).
+columns:
+  name: Name
+  pk_hash: pk_hash
+  profile_url: profile_url
+  status: status
+  attestation_tx_id: attestation_tx_id
