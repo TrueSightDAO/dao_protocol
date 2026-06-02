@@ -98,7 +98,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--donation-amount", required=True, help="USD amount of the donation (numeric).")
     parser.add_argument("--donor-name", required=True, help="Display name of the donor.")
-    parser.add_argument("--donor-email", required=True, help="Donor's email — written to Owner Email on Agroverse QR codes.")
+    parser.add_argument("--donor-email", default="", help="Donor's email — written to Owner Email on Agroverse QR codes. Optional: programs that key holders by credential identity (e.g. Butterfly Effect pk_hash) have no email; leave empty.")
+    parser.add_argument("--landing-page", default=None, help="Per-row consumer scan target (col B). Optional override of the Currency's default landing_page — e.g. a program member's credential profile_url so scanning the tree resolves to their certificate page.")
     parser.add_argument(
         "--proof-file",
         required=True,
@@ -179,6 +180,7 @@ def main(argv: list[str] | None = None) -> int:
         ("Donor Name", args.donor_name),
         ("Donor Email", args.donor_email),
         ("Cash collected at (UTC)", cash_collected_iso),
+        *( [("Landing Page", args.landing_page)] if args.landing_page else [] ),
         ("Attached Filename", dest_filename),
         ("Destination Contribution File Location", dest_url),
     ]
