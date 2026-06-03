@@ -58,6 +58,10 @@ ROUTING: list = [
     ("[CREDENTIALING ATTESTATION EVENT]", [("CREDENTIALING_ATTESTATION", "process_attestation_events")], False),
     ("[PARTNER CHECK-IN EVENT]", [("PARTNER_CHECK_IN_PROCESSING", "processPartnerCheckInsFromTelegramChatLogs")], False),
     ("[ASSET RECEIPT EVENT]", [("ASSET_RECEIPT_PROCESSING", "processAssetReceiptsFromTelegramChatLogs")], True),
+    # Self-serve program onboarding (step 1). Scanner appends a PENDING row to the
+    # `Program Registrations` tab; a governor approves in step 2 before provisioning.
+    # Spec: agentic_ai_context/PROGRAM_PARTNER_ONBOARDING.md.
+    ("[PROGRAM REGISTRATION REQUEST]", [("PROGRAM_REGISTRATION_PROCESSING", "processProgramRegistrationsFromTelegramChatLogs")], False),
 ]
 
 
