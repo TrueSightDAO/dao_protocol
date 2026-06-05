@@ -206,6 +206,8 @@ def main(argv: list[str] | None = None) -> int:
         ("TDG Issued", tdg_issued),
     ]
 
+    event_name = "CONTRIBUTION EVENT"
+
     if args.attachment:
         original_filename = Path(args.attachment).name
         if args.attached_filename:
@@ -217,8 +219,6 @@ def main(argv: list[str] | None = None) -> int:
     else:
         attrs.append((_ATTACHED_FILENAME_LABEL, args.attached_filename or "N/A"))
         attrs.append(("Destination Contribution File Location", "N/A"))
-
-    event_name = "CONTRIBUTION EVENT"
     if args.dry_run:
         payload, txn_id, share_text = client.sign(event_name, attrs)
         print(share_text)
