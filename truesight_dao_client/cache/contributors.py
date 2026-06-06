@@ -130,6 +130,7 @@ def _lookup_in_snapshot(snapshot: dict[str, Any], public_key_b64: str) -> dict[s
             if key_entry.get("public_key") == public_key_b64:
                 return {
                     "contributor_name": contributor.get("name"),
+                    "roles": contributor.get("roles"),
                     "voting_rights": contributor.get("voting_rights"),
                     "voting_rights_circulated": totals.get("voting_rights_circulated"),
                     "total_assets": totals.get("total_assets"),
