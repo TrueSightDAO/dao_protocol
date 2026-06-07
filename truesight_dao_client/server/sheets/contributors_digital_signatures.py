@@ -91,18 +91,26 @@ def _rows_matching_verification_key(vk: str) -> list[int]:
 
 
 def find_by_public_key(public_key_b64: str) -> dict | None:
-    """Prefer an ACTIVE row, else the newest VERIFYING. Returns {row, status, email} or None."""
+    """Prefer an ACTIVE row, else the newest VERIFYING. Returns {row, status, name, email} or None.
+
+    `name` (col A "Contributor Name") is included for the public `check_digital_signature`
+    lookup, which echoes the contributor's name back to the DApp / POS clients.
+    """
     rows = _rows_matching_public_key(public_key_b64)
     if not rows:
         return None
     for r in rows:  # any ACTIVE
         row = _fetch_row_a_h(r)
         if base.cell(row, COL_STATUS).strip().upper() == "ACTIVE":
-            return {"row": r, "status": "ACTIVE", "email": base.cell(row, COL_EMAIL).strip()}
+            return {"row": r, "status": "ACTIVE",
+                    "name": base.cell(row, COL_NAME).strip(),
+                    "email": base.cell(row, COL_EMAIL).strip()}
     for r in reversed(rows):  # newest VERIFYING
         row = _fetch_row_a_h(r)
         if base.cell(row, COL_STATUS).strip().upper() == "VERIFYING":
-            return {"row": r, "status": "VERIFYING", "email": base.cell(row, COL_EMAIL).strip()}
+            return {"row": r, "status": "VERIFYING",
+                    "name": base.cell(row, COL_NAME).strip(),
+                    "email": base.cell(row, COL_EMAIL).strip()}
     return None
 
 
