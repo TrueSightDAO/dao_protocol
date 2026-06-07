@@ -23,6 +23,7 @@ Homepage = "https://github.com/TrueSightDAO/dao_protocol"
 
 [project.scripts]
 truesight-dao-auth = "truesight_dao_client.auth:main"
+truesight-dao-ping-sophia = "truesight_dao_client.modules.ping_sophia:main"
 truesight-dao-protocol-server = "truesight_dao_client.server.main:main"
 truesight-dao-batch-qr-generator = "truesight_dao_client.modules.batch_qr_generator:main"
 truesight-dao-create-proposal = "truesight_dao_client.modules.create_proposal:main"
