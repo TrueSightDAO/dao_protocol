@@ -1,0 +1,33 @@
+name: Publish @truesight_dao/dao-client to npm
+
+# Publishes the browser DAO-client package to npm (public, so unpkg/jsDelivr can
+# serve it for the oracle + dapp). Trigger manually (workflow_dispatch) or by
+# pushing a tag like `dao-client-v1.0.0`. prepublishOnly rebuilds dist first.
+#
+# Secret required: NPM_TOKEN — an npm Automation token for an account with
+# publish rights on the `truesight_dao` org.
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "dao-client-v*"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/dao-client
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+      - name: Install deps (build toolchain)
+        run: npm install
+      - name: Publish (public, scoped)
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -1,19 +1,19 @@
-# @truesight/dao-client
+# @truesight_dao/dao-client
 
 Zero-dependency browser library for TrueSight DAO identity management, cryptographic signing, and Edgar submission.
 
 ## Installation
 
 ```bash
-npm install @truesight/dao-client
+npm install @truesight_dao/dao-client
 ```
 
 Or include via CDN in a static HTML file:
 
 ```html
-<script src="https://unpkg.com/@truesight/dao-client"></script>
+<script src="https://unpkg.com/@truesight_dao/dao-client"></script>
 <!-- or -->
-<script src="https://cdn.jsdelivr.net/npm/@truesight/dao-client"></script>
+<script src="https://cdn.jsdelivr.net/npm/@truesight_dao/dao-client"></script>
 ```
 
 When loaded via CDN, the library is available as the global `DaoClient` object.
@@ -21,7 +21,7 @@ When loaded via CDN, the library is available as the global `DaoClient` object.
 ## Quick Start
 
 ```js
-import { DaoClient } from '@truesight/dao-client';
+import { DaoClient } from '@truesight_dao/dao-client';
 
 // Create a client — keypair is auto-generated if missing
 const client = new DaoClient();
