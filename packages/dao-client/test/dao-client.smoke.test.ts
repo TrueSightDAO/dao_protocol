@@ -16,19 +16,61 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { describe, it, expect, beforeAll } from 'vitest';
 
-describe('dao-client browser bundle (dao-client.min.js)', () => {
-  let bundleCode: string;
+// A real RSA-2048 keypair (SPKI/PKCS#8 base64) for testing the sign path.
+// The DaoClient constructor loads from localStorage; if no keys exist it
+// calls generateKeyPairSync() which throws (it's a placeholder that requires
+// pre-existing keys). We seed localStorage so the constructor path works.
+const TEST_PUBLIC_KEY =
+  'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAlB5UmQJECz/BAHNROjgg' +
+  'ADvyn91CVC6kR5F7r+h+OtOS/wziC+sS1xdphh2ms+jULbDuVEsTzPQPkTOrGqWAY/VF' +
+  'DJV6KtMD1Txvm3m6BBmhvZTRKx3rCWcDXFDlsyu5HyTli6rUFRXkLse6oEdhd1ScFU72' +
+  'Fyt3JoFju9d0/3n/GaRiojHJFtiCL8uBuubCUJi9ee3K3YcNGtjpLb9jaRLLvPAjmXIT' +
+  'Kr8i2XMIwN1bJjbFtAg89A5cz6U3+gT2WG4ncj3dnmLq3MLW97TV96BsZTYvJWrsfYlf' +
+  'AzSqxNCLs/0Hsgg59wChVrWpcgWmBz6/tG+a4qoGRIxMNVLtUQIDAQAB';
+const TEST_PRIVATE_KEY =
+  'MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCUHlSZAkQLP8EA' +
+  'c1E6OCAAO/Kf3UJULqRHkXuv6H4605L/DOIL6xLXF2mGHaaz6NQtsO5USxPM9A+RM6sa' +
+  'pYBj9UUMlXoq0wPVPG+beboEGaG9lNErHesJZwNcUOWzK7kfJOWLqtQVFeQux7qgR2F3' +
+  'VJwVTvYXK3cmgWO713T/ef8ZpGKiMckW2IIvy4G65sJQmL157crdhw0a2Oktv2NpEsu8' +
+  '8COZchMqvyLZcwjA3VsmNsW0CDz0DlzPpTf6BPZYbidyPd2eYurcwtb3tNX3oGxlNi8l' +
+  'aux9iV8DNKrE0Iuz/QeyCDn3AKFWtalyBaYHPr+0b5riqgZEjEw1Uu1RAgMBAAECggEA' +
+  'KAQHs+y2SFm5gS8mZzWpg5auhj0HAeo17LXjthL4I1lskaY/3ZttFBoZoqeZFWrWA+AU' +
+  'i0ZbO5hGKmLMm57R0G9/b5ZkknQ+yVmSB2178UaheS/e0Ki9CmW/tS2P2Pd7hGv57eFB' +
+  'ec7XvkGsbEfMj6oWnvUdrAXMo2T6dlGPpMM94r8bU34nbVyH7dCjluRuGQF/rYYF0ecH' +
+  'XE5nSyB1W+DKl16Dr1VpLxaRf04lYCOiMTQP3yc4vtEFROuyMQseVqOTn7TfW2khTTSb' +
+  'jJC4l3wEINlXH1PsHd7i7N1w5pUIZn2TSbz2nyuzPMdiPqeA8nLW+9/UhkQdh33PGf1f' +
+  'NwKBgQDOGbzwCyGrb5OxBqdPztXjPWas/8tb4wtMzsthbrOaiI9Is0dbd+610s9prSNi' +
+  '8tFYJgNCc9aW8KF836IDDqVync/TzOTIdC1e6A1EEbpgfeoLrVAqoUyd3tTIxT19rE5S' +
+  'MfubEIrmNQ+hcMBwD5obxzEBdg6snhS6es+Ih1pn9wKBgQC3+tJqkGP4gFbSPXguJAVn' +
+  '3Pz57aSQmKDoC/IuFkAj4C+sTP/jTvLQC4hVpdtYiHMN/8Gtd6CoQtv/GrPczdu1wodV' +
+  'Xp91uyMQuAUUOPI460jbrYR+WcDlnbNTHuj1lo+zUp/d7OGZ0qpiXOa+S9iotVT7iAby' +
+  'rSs1KmzzVrDS9wKBgQCo3O2wv24WyJR5trne6djVFrnJhMtZvezEQarhaZI+SyUaq8kL' +
+  'aHhtAQxvySv1Jn3fe0WwbLilcwLdDV3wo09rWWGuZ3ILyyRhXj+ARgYuiPv6FUZZp07f' +
+  'CnPNC84V6ddCATHlGuizNUZZP8hsCFx75fiA+fmL9PmG0Ji5hCzOgQKBgQCt0I3Sl6+b' +
+  'KsTbw68zCF0DD0kBZn6/DTOXhxG6cNMQEdF4Wxa1zfSgkQSwxg1Ay0jHxQVZuVdTIDdv' +
+  '/+5FgUc9pRbulILaW355YSGLRXGyTLd8s6YlKO6RADhXIzC8NQ52QG1A4XcSOHE4lMR6' +
+  'rHV4jjhHmu/Vfb0AcaCVFSXhaQKBgHniVzIqRKvAl1Rty3+9tca6m0gbBvBsuY+h7v8X' +
+  'rVNc+mjzzNlCu4Bk4AYDSucOEaVb1hVUUA4qcG0zUMgBXR3qr26NbWlHNTHJGXC7Z8/g' +
+  'yBWCWs8NaPrxI5Us8YHjbBoZt1WCoX93I/WV5u4FfPu8jN+QXsG2+G3yw+uWQEW4';
 
+describe('dao-client browser bundle (dao-client.min.js)', () => {
   beforeAll(() => {
     // Read the built bundle from dist
-    bundleCode = readFileSync(
+    const bundleCode = readFileSync(
       resolve(__dirname, '..', 'dist', 'dao-client.min.js'),
       'utf-8'
     );
-    // Execute it in the current global scope (happy-dom provides window, crypto, etc.)
-    const script = document.createElement('script');
-    script.textContent = bundleCode;
-    document.head.appendChild(script);
+    // Execute the IIFE in the global scope so window.DaoClient is populated.
+    // eval() is used because new Function() creates a scope that doesn't
+    // inherit happy-dom's window/localStorage/crypto globals.
+    eval(bundleCode);
+
+    // Pre-seed localStorage with a real RSA-2048 keypair so the DaoClient
+    // constructor can load keys instead of calling generateKeyPairSync()
+    // (which throws — it's a placeholder that requires pre-existing keys).
+    // In production, keys are generated on first visit and persisted.
+    localStorage.setItem('truesight_dao_public_key', TEST_PUBLIC_KEY);
+    localStorage.setItem('truesight_dao_private_key', TEST_PRIVATE_KEY);
   });
 
   it('window.DaoClient is defined and is the class itself (not a namespace wrapper)', () => {
