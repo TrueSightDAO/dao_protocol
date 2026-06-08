@@ -1,0 +1,33 @@
+name: npm token health check
+
+# Proactively catches NPM_TOKEN expiry BEFORE it blocks a release. The token is
+# an npm Automation token (truesight_dao org) with a ~90-day expiry; when it
+# lapses, dao-client auto-publish silently can't run. This weekly check runs
+# `npm whoami` and FAILS LOUDLY (GitHub notifies on a failed scheduled run) so a
+# governor rotates it in time. Rotation: regenerate the token on npmjs.com →
+# update the NPM_TOKEN secret on dao_protocol. Tracked in
+# agentic_ai_context/OPEN_FOLLOWUPS.md.
+
+on:
+  schedule:
+    - cron: "0 13 * * 1"   # Mondays 13:00 UTC
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+      - name: npm whoami (is the token alive?)
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if WHO=$(npm whoami 2>/dev/null); then
+            echo "::notice::NPM_TOKEN healthy — authenticated as ${WHO}."
+          else
+            echo "::error::NPM_TOKEN is INVALID or EXPIRED — dao-client auto-publish is broken until rotated. Regenerate an npm Automation token (truesight_dao org) and update the NPM_TOKEN secret on dao_protocol. See agentic_ai_context/OPEN_FOLLOWUPS.md."
+            exit 1
+          fi

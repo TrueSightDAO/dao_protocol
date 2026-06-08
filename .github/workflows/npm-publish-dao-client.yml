@@ -51,5 +51,8 @@ jobs:
             echo "::notice::${NAME}@${VERSION} already on npm — skipping publish (no-op)."
           else
             echo "Publishing ${NAME}@${VERSION}…"
-            npm publish --access public
+            npm publish --access public || {
+              echo "::error::Publish failed. If this is 401/EOTP the NPM_TOKEN likely EXPIRED — rotate it (npm Automation token for the truesight_dao org) and update the NPM_TOKEN secret on dao_protocol. See agentic_ai_context/OPEN_FOLLOWUPS.md."
+              exit 1
+            }
           fi
