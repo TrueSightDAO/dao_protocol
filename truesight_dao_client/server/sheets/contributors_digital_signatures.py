@@ -2,10 +2,13 @@
 from `dapp_digital_signature_onboarding/demo_edgar_digital_signature_sheet_flow.py` plus the real
 model's col-H ("Verification Key Consumed") logic.
 
-Tab "Contributors Digital Signatures" (cols A–H): A Name · B Created · C Last Active · D Status ·
-E Signature(=SPKI public key) · F Email · G Verification Key · H Verification Key Consumed.
-Single-use verification: `consume_verification` flips VERIFYING→ACTIVE and stamps H. Uses the
-default service-account key (same workbook as the other Edgar Gdrive tabs)."""
+Tab "Contributors Digital Signatures" (cols A–I): A Name · B Created · C Last Active · D Status ·
+E Signature(=SPKI public key) · F Email · G Verification Key · H Verification Key Consumed ·
+I Verification Email Last Sent.
+Single-use verification: `consume_verification` flips VERIFYING→ACTIVE and stamps H.
+Resend: `update_email_last_sent` stamps I for rate-limit cooldown.
+Uses the default service-account key (same workbook as the other Edgar Gdrive tabs).
+"""
 
 from __future__ import annotations
 
@@ -24,6 +27,7 @@ CONTACT_SHEET = "Contributors contact information"
 
 COL_NAME, COL_CREATED, COL_LAST_ACTIVE, COL_STATUS = 1, 2, 3, 4
 COL_SIGNATURE, COL_EMAIL, COL_VERIFICATION_KEY, COL_VK_CONSUMED = 5, 6, 7, 8
+COL_EMAIL_LAST_SENT = 9  # I — timestamp of most recent verification email send
 
 
 def _key() -> str:
@@ -35,7 +39,7 @@ def _now() -> str:
 
 
 def normalize_public_key(value) -> str:
-    raw = str(value or "").replace("​", "").replace("﻿", "").strip()
+    raw = str(value or "").replace("\u200b", "").replace("\ufeff", "").strip()
     if not raw:
         return ""
     pemish = raw.replace("\r\n", "\n").replace("\r", "\n")
@@ -56,8 +60,9 @@ def normalize_verification_key(value) -> str:
     return urllib.parse.unquote_plus(s) if "%" in s else s
 
 
-def _fetch_row_a_h(row: int) -> list:
-    vals = base.get_values(SPREADSHEET_ID, f"{base.quoted_prefix(SHEET)}!A{row}:H{row}", key_path=_key())
+def _fetch_row_a_i(row: int) -> list:
+    """Fetch columns A through I for a given sheet row (1-based)."""
+    vals = base.get_values(SPREADSHEET_ID, f"{base.quoted_prefix(SHEET)}!A{row}:I{row}", key_path=_key())
     return vals[0] if vals else []
 
 
@@ -91,7 +96,10 @@ def _rows_matching_verification_key(vk: str) -> list[int]:
 
 
 def find_by_public_key(public_key_b64: str) -> dict | None:
-    """Prefer an ACTIVE row, else the newest VERIFYING. Returns {row, status, name, email} or None.
+    """Prefer an ACTIVE row, else the newest VERIFYING.
+
+    Returns {row, status, name, email} or None.
+    For VERIFYING rows, also returns {vk} (the verification key) for resend use.
 
     `name` (col A "Contributor Name") is included for the public `check_digital_signature`
     lookup, which echoes the contributor's name back to the DApp / POS clients.
@@ -100,17 +108,18 @@ def find_by_public_key(public_key_b64: str) -> dict | None:
     if not rows:
         return None
     for r in rows:  # any ACTIVE
-        row = _fetch_row_a_h(r)
+        row = _fetch_row_a_i(r)
         if base.cell(row, COL_STATUS).strip().upper() == "ACTIVE":
             return {"row": r, "status": "ACTIVE",
                     "name": base.cell(row, COL_NAME).strip(),
                     "email": base.cell(row, COL_EMAIL).strip()}
     for r in reversed(rows):  # newest VERIFYING
-        row = _fetch_row_a_h(r)
+        row = _fetch_row_a_i(r)
         if base.cell(row, COL_STATUS).strip().upper() == "VERIFYING":
             return {"row": r, "status": "VERIFYING",
                     "name": base.cell(row, COL_NAME).strip(),
-                    "email": base.cell(row, COL_EMAIL).strip()}
+                    "email": base.cell(row, COL_EMAIL).strip(),
+                    "vk": base.cell(row, COL_VERIFICATION_KEY).strip()}
     return None
 
 
@@ -126,6 +135,37 @@ def append_pending_row(email: str, public_key: str, verification_key: str) -> bo
         return False
 
 
+def update_email_last_sent(sheet_row: int) -> bool:
+    """Stamp column I (Verification Email Last Sent) with the current UTC timestamp.
+    Returns True on success."""
+    try:
+        now = _now()
+        base.sheets_service(_key()).spreadsheets().values().update(
+            spreadsheetId=SPREADSHEET_ID,
+            range=f"{base.quoted_prefix(SHEET)}!I{sheet_row}:I{sheet_row}",
+            valueInputOption="USER_ENTERED",
+            body={"values": [[now]]},
+        ).execute()
+        return True
+    except Exception:
+        return False
+
+
+def get_email_last_sent(sheet_row: int) -> str | None:
+    """Read column I for a given row. Returns the timestamp string or None."""
+    try:
+        vals = base.get_values(
+            SPREADSHEET_ID,
+            f"{base.quoted_prefix(SHEET)}!I{sheet_row}:I{sheet_row}",
+            key_path=_key()
+        )
+        if vals and vals[0] and vals[0][0].strip():
+            return vals[0][0].strip()
+        return None
+    except Exception:
+        return None
+
+
 def consume_verification(public_key_b64: str, verification_key: str, email: str | None = None) -> dict:
     """Single-use VK consumption. Outcomes: activated | already_consumed_same_key | pubkey_mismatch
     | not_found | error (mirrors Rails consume_verification!)."""
@@ -138,7 +178,7 @@ def consume_verification(public_key_b64: str, verification_key: str, email: str 
         if not rows:
             return {"outcome": "not_found"}
         sheet_row = max(rows)  # vk unique; newest wins
-        row = _fetch_row_a_h(sheet_row)
+        row = _fetch_row_a_i(sheet_row)
         if not row:
             return {"outcome": "not_found"}
         if normalize_public_key(base.cell(row, COL_SIGNATURE)) != pk:
