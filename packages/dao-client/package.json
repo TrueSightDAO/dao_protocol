@@ -1,0 +1,33 @@
+{
+  "name": "@truesight/dao-client",
+  "version": "1.0.0",
+  "description": "Zero-dependency browser library for TrueSight DAO identity, signing, and Edgar submission",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "unpkg": "dist/dao-client.min.js",
+  "jsdelivr": "dist/dao-client.min.js",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc && esbuild src/index.ts --bundle --minify --format=iife --global-name=DaoClient --outfile=dist/dao-client.min.js",
+    "build:esm": "tsc && esbuild src/index.ts --bundle --format=esm --outfile=dist/index.mjs",
+    "test": "vitest run",
+    "prepublishOnly": "npm run build && npm run build:esm"
+  },
+  "keywords": [
+    "truesight",
+    "dao",
+    "edgar",
+    "signature",
+    "rsa",
+    "webcrypto"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "esbuild": "^0.20.0",
+    "vitest": "^1.6.0"
+  }
+}
