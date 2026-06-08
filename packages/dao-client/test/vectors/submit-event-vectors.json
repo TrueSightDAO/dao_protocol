@@ -1,0 +1,122 @@
+[
+  {
+    "name": "basic contribution event",
+    "eventType": "CONTRIBUTION EVENT",
+    "fields": {
+      "Type": "Time (Minutes)",
+      "Amount": "40"
+    },
+    "expectedCanonicalPattern": "^\\[CONTRIBUTION EVENT\\]\\n- Timestamp: \\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z\\n- Type: Time \\(Minutes\\)\\n- Amount: 40\\n--------$",
+    "description": "Standard contribution event with two fields. Timestamp is auto-injected as first field."
+  },
+  {
+    "name": "email registered event",
+    "eventType": "EMAIL REGISTERED EVENT",
+    "fields": {
+      "Email": "gary@truesight.me"
+    },
+    "expectedCanonicalPattern": "^\\[EMAIL REGISTERED EVENT\\]\\n- Timestamp: \\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z\\n- Email: gary@truesight\\.me\\n--------$",
+    "description": "Email registration with a single field."
+  },
+  {
+    "name": "email verification event",
+    "eventType": "EMAIL VERIFICATION EVENT",
+    "fields": {
+      "Email": "gary@truesight.me",
+      "Verification Key": "abc123xyz"
+    },
+    "expectedCanonicalPattern": "^\\[EMAIL VERIFICATION EVENT\\]\\n- Timestamp: \\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z\\n- Email: gary@truesight\\.me\\n- Verification Key: abc123xyz\\n--------$",
+    "description": "Email verification with email and verification key."
+  },
+  {
+    "name": "practice event with array field",
+    "eventType": "PRACTICE EVENT",
+    "fields": {
+      "Program": "capoeira-tribo-mirim",
+      "Moves Practiced": ["ginga", "au", "cocorinha"]
+    },
+    "expectedCanonicalPattern": "^\\[PRACTICE EVENT\\]\\n- Timestamp: \\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z\\n- Program: capoeira-tribo-mirim\\n- Moves Practiced: ginga, au, cocorinha\\n--------$",
+    "description": "Practice event with an array field (joined with comma+space)."
+  },
+  {
+    "name": "event with multi-line value",
+    "eventType": "NOTE EVENT",
+    "fields": {
+      "Description": "Line one\\nLine two\\nLine three"
+    },
+    "expectedCanonicalPattern": "^\\[NOTE EVENT\\]\\n- Timestamp: \\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z\\n- Description: Line one\\n  Line two\\n  Line three\\n--------$",
+    "description": "Multi-line values get indented continuation lines."
+  },
+  {
+    "name": "event with special characters",
+    "eventType": "INVENTORY MOVEMENT",
+    "fields": {
+      "Item": "Ceremonial Cacao (2024)",
+      "QR Code": "2024OSCAR_20260121_12",
+      "Notes": "Delivered to Kirsten's SF hub"
+    },
+    "expectedCanonicalPattern": "^\\[INVENTORY MOVEMENT\\]\\n- Timestamp: \\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z\\n- Item: Ceremonial Cacao \\(2024\\)\\n- QR Code: 2024OSCAR_20260121_12\\n- Notes: Delivered to Kirsten's SF hub\\n--------$",
+    "description": "Special characters like parentheses and underscores are preserved."
+  },
+  {
+    "name": "event with numeric field values",
+    "eventType": "TREE PLANTING EVENT",
+    "fields": {
+      "Latitude": -23.5505,
+      "Longitude": -46.6333,
+      "Trees Planted": 5
+    },
+    "expectedCanonicalPattern": "^\\[TREE PLANTING EVENT\\]\\n- Timestamp: \\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z\\n- Latitude: -23\\.5505\\n- Longitude: -46\\.6333\\n- Trees Planted: 5\\n--------$",
+    "description": "Numeric values are stringified."
+  },
+  {
+    "name": "event with boolean field value",
+    "eventType": "FLAG EVENT",
+    "fields": {
+      "Active": true,
+      "Verified": false
+    },
+    "expectedCanonicalPattern": "^\\[FLAG EVENT\\]\\n- Timestamp: \\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z\\n- Active: true\\n- Verified: false\\n--------$",
+    "description": "Boolean values are stringified as 'true'/'false'."
+  },
+  {
+    "name": "event with null and undefined fields (should be skipped)",
+    "eventType": "TEST EVENT",
+    "fields": {
+      "Name": "test",
+      "NullField": null,
+      "UndefinedField": undefined
+    },
+    "expectedCanonicalPattern": "^\\[TEST EVENT\\]\\n- Timestamp: \\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z\\n- Name: test\\n--------$",
+    "description": "Null and undefined fields are skipped."
+  },
+  {
+    "name": "event with object field value",
+    "eventType": "CONFIG EVENT",
+    "fields": {
+      "Settings": {"theme": "dark", "notifications": true}
+    },
+    "expectedCanonicalPattern": "^\\[CONFIG EVENT\\]\\n- Timestamp: \\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z\\n- Settings: \\{\\\"theme\\\":\\\"dark\\\",\\\"notifications\\\":true\\}\\n--------$",
+    "description": "Object values are JSON-stringified."
+  },
+  {
+    "name": "event with [... EVENT] substring in value (should be rejected)",
+    "eventType": "TEST EVENT",
+    "fields": {
+      "Notes": "See [CONTRIBUTION EVENT] notes"
+    },
+    "expectedError": "Field 'Notes' contains a bracketed event tag",
+    "description": "Field values containing [... EVENT] substrings are rejected to prevent Edgar misdispatch."
+  },
+  {
+    "name": "event with [... EVENT] in multiple values (should be rejected)",
+    "eventType": "TEST EVENT",
+    "fields": {
+      "Title": "Safe value",
+      "Notes": "See [PRACTICE EVENT] for details",
+      "Reference": "Also [CONTRIBUTION EVENT]"
+    },
+    "expectedError": "Field 'Notes' contains a bracketed event tag",
+    "description": "First offending field is reported."
+  }
+]
