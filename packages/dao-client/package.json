@@ -1,6 +1,6 @@
 {
   "name": "@truesight_dao/dao-client",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Zero-dependency browser library for TrueSight DAO identity, signing, and Edgar submission",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -11,10 +11,17 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc && esbuild src/index.ts --bundle --minify --format=iife --global-name=DaoClient --outfile=dist/dao-client.min.js",
+    "build": "tsc && esbuild src/index.ts --bundle --minify --format=iife --global-name=DaoClient --footer-js=\"DaoClient=DaoClient.DaoClient||DaoClient;\" --outfile=dist/dao-client.min.js",
     "build:esm": "tsc && esbuild src/index.ts --bundle --format=esm --outfile=dist/index.mjs",
     "test": "vitest run",
-    "prepublishOnly": "npm run build && npm run build:esm"
+    "smoke-test": "node test/smoke-test.mjs",
+    "prepublishOnly": "npm run build && npm run build:esm && node test/smoke-test.mjs"
+  },
+  "scripts": {
+    "build": "tsc && esbuild src/index.ts --bundle --minify --format=iife --global-name=DaoClient --footer-js=\"DaoClient=DaoClient.DaoClient||DaoClient;\" --outfile=dist/dao-client.min.js",
+    "build:esm": "tsc && esbuild src/index.ts --bundle --format=esm --outfile=dist/index.mjs",
+    "test": "vitest run",
+    "prepublishOnly": "npm run build && npm run build:esm && node test/smoke-test.mjs"
   },
   "keywords": [
     "truesight",
