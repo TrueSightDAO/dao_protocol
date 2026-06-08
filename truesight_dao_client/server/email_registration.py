@@ -1,6 +1,12 @@
 """Port of Rails `DaoEmailRegistrationService` — handles `[EMAIL REGISTERED]` / `[EMAIL
 VERIFICATION]` after a verified `/dao` submission. REGISTERED → append a VERIFYING row +
 send the GAS verification email; VERIFICATION → single-use consume (VERIFYING→ACTIVE).
+
+**Resend support (2026-06-08):** When a re-submitted `[EMAIL REGISTERED EVENT]` is signed by a
+key that is already **VERIFYING**, re-send the verification email using the existing `vk`
+instead of skipping silently. Gated by a 60s cooldown per row (column I). ACTIVE keys still
+skip (already verified).
+
 Runs synchronously; returns a structured dict (`applicable`/`ok`/`event`/…) for the response.
 
 After a successful `consume_verification` we also fire the GAS `refresh_dao_members_cache` action
@@ -17,6 +23,7 @@ import json
 import logging
 import re
 import secrets
+from datetime import datetime, timezone
 
 import requests
 
@@ -25,6 +32,7 @@ from .sheets import contributors_digital_signatures as cds
 
 logger = logging.getLogger("dao_protocol.email_registration")
 _DEFAULT_RETURN_URL = "https://truesightdao.github.io/dapp/create_signature.html"
+_RESEND_COOLDOWN_SECONDS = 60
 
 
 def handle_after_successful_verify(text: str, verification_result: dict | None) -> dict:
@@ -65,6 +73,24 @@ def _generation_source_url(text: str) -> str | None:
     return m.group(1).strip() if m else None
 
 
+def _parse_timestamp(ts: str) -> datetime | None:
+    """Parse a sheet timestamp string (e.g. '2026-06-08 12:34:56') into a datetime.
+    Returns None if unparseable."""
+    if not ts or not ts.strip():
+        return None
+    try:
+        # Try the standard format first
+        return datetime.strptime(ts.strip(), "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+    except ValueError:
+        pass
+    try:
+        # Try the legacy format (no spaces, e.g. '20250706 15:50:30')
+        return datetime.strptime(ts.strip(), "%Y%m%d %H:%M:%S").replace(tzinfo=timezone.utc)
+    except ValueError:
+        pass
+    return None
+
+
 def _process_registration(text: str, vr: dict) -> dict:
     email = (_extract_field(text, "Email") or "").lower().strip()
     if not email or "@" not in email:
@@ -74,11 +100,58 @@ def _process_registration(text: str, vr: dict) -> dict:
         return {"ok": False, "event": "EMAIL_REGISTERED", "error": "Could not read digital signature from submission."}
 
     existing = cds.find_by_public_key(pk)
-    if existing and existing.get("status") in ("ACTIVE", "VERIFYING"):
-        return {"ok": True, "event": "EMAIL_REGISTERED", "skipped": True,
-                "reason": "public_key_already_pending_or_active",
-                "email": existing.get("email") or email, "verification_email_sent": False}
+    if existing:
+        status = existing.get("status", "")
+        if status == "ACTIVE":
+            return {"ok": True, "event": "EMAIL_REGISTERED", "skipped": True,
+                    "reason": "public_key_already_active",
+                    "email": existing.get("email") or email, "verification_email_sent": False}
+        if status == "VERIFYING":
+            # Resend path: reuse existing vk, gate by cooldown
+            sheet_row = existing.get("row")
+            existing_vk = existing.get("vk", "")
+            if not sheet_row or not existing_vk:
+                return {"ok": False, "event": "EMAIL_REGISTERED",
+                        "error": "Could not read existing verification key for resend."}
 
+            # Check cooldown
+            last_sent = cds.get_email_last_sent(sheet_row)
+            if last_sent:
+                last_dt = _parse_timestamp(last_sent)
+                if last_dt:
+                    elapsed = (datetime.now(timezone.utc) - last_dt).total_seconds()
+                    if elapsed < _RESEND_COOLDOWN_SECONDS:
+                        retry_after = int(_RESEND_COOLDOWN_SECONDS - elapsed) + 1
+                        logger.info(
+                            "EMAIL REGISTERED: resend cooldown active for row=%s "
+                            "(elapsed=%.0fs, retry_after=%ds)",
+                            sheet_row, elapsed, retry_after
+                        )
+                        return {"ok": True, "event": "EMAIL_REGISTERED",
+                                "resent": False, "cooldown": True,
+                                "retry_after_s": retry_after,
+                                "email": existing.get("email") or email}
+
+            # Cooldown passed or no prior send — re-send the email
+            gas = _trigger_verification_email(
+                existing.get("email") or email,
+                existing_vk,
+                _generation_source_url(text)
+            )
+            if not gas.get("ok"):
+                return {"ok": False, "event": "EMAIL_REGISTERED",
+                        "error": gas.get("error") or "Verification email could not be resent."}
+
+            # Stamp last-sent timestamp
+            cds.update_email_last_sent(sheet_row)
+            logger.info("EMAIL REGISTERED: resent verification email for row=%s", sheet_row)
+            return {"ok": True, "event": "EMAIL_REGISTERED",
+                    "resent": True, "cooldown": False,
+                    "email": existing.get("email") or email,
+                    "verification_email_sent": True,
+                    "skipped": False}
+
+    # No existing row — fresh registration
     vk = secrets.token_urlsafe(32)
     if not cds.append_pending_row(email, pk, vk):
         return {"ok": False, "event": "EMAIL_REGISTERED", "error": "Failed to append Contributors Digital Signatures row."}
@@ -86,7 +159,14 @@ def _process_registration(text: str, vr: dict) -> dict:
     gas = _trigger_verification_email(email, vk, _generation_source_url(text))
     if not gas.get("ok"):
         return {"ok": False, "event": "EMAIL_REGISTERED", "error": gas.get("error") or "Verification email could not be sent."}
-    return {"ok": True, "event": "EMAIL_REGISTERED", "email": email, "verification_email_sent": True, "skipped": False}
+
+    # Stamp last-sent on the newly appended row (find it by pk)
+    fresh = cds.find_by_public_key(pk)
+    if fresh and fresh.get("row"):
+        cds.update_email_last_sent(fresh["row"])
+
+    return {"ok": True, "event": "EMAIL_REGISTERED", "email": email,
+            "verification_email_sent": True, "skipped": False}
 
 
 def _process_verification(text: str, vr: dict) -> dict:
