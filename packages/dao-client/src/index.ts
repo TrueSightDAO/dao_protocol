@@ -1,11 +1,11 @@
 /**
- * @truesight/dao-client
+ * @truesight_dao/dao-client
  *
  * Zero-dependency browser library for TrueSight DAO identity management,
  * cryptographic signing, and Edgar submission.
  *
  * Usage:
- *   import { DaoClient } from '@truesight/dao-client';
+ *   import { DaoClient } from '@truesight_dao/dao-client';
  *   const client = new DaoClient();
  *   await client.submit('CONTRIBUTION EVENT', { ... });
  */

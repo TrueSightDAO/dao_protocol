@@ -1,5 +1,5 @@
 {
-  "name": "@truesight/dao-client",
+  "name": "@truesight_dao/dao-client",
   "version": "1.0.0",
   "description": "Zero-dependency browser library for TrueSight DAO identity, signing, and Edgar submission",
   "main": "dist/index.js",
