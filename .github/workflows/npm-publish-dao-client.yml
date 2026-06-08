@@ -1,8 +1,14 @@
 name: Publish @truesight_dao/dao-client to npm
 
 # Publishes the browser DAO-client package to npm (public, so unpkg/jsDelivr can
-# serve it for the oracle + dapp). Trigger manually (workflow_dispatch) or by
-# pushing a tag like `dao-client-v1.0.0`. prepublishOnly rebuilds dist first.
+# serve it for the oracle + dapp).
+#
+# AUTOMATIC: on any push to main that changes packages/dao-client/package.json,
+# this builds, runs the runtime smoke test, and publishes IF the version in
+# package.json isn't already on npm. So the whole release is just: bump the
+# version in a PR -> merge -> it publishes itself. Idempotent (re-runs / unrelated
+# edits are a no-op) and gated (a failing test blocks the publish).
+# Also still triggerable manually (workflow_dispatch) or by a dao-client-v* tag.
 #
 # Secret required: NPM_TOKEN — an npm Automation token for an account with
 # publish rights on the `truesight_dao` org.
@@ -10,6 +16,9 @@ name: Publish @truesight_dao/dao-client to npm
 on:
   workflow_dispatch:
   push:
+    branches: [main]
+    paths:
+      - "packages/dao-client/package.json"
     tags:
       - "dao-client-v*"
 
@@ -25,9 +34,22 @@ jobs:
         with:
           node-version: "20"
           registry-url: "https://registry.npmjs.org"
-      - name: Install deps (build toolchain)
+
+      - name: Install deps
         run: npm install
-      - name: Publish (public, scoped)
-        run: npm publish --access public
+
+      - name: Build + runtime smoke test (publish gate)
+        run: npm test
+
+      - name: Publish if this version is new
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          NAME=$(node -p "require('./package.json').name")
+          if npm view "${NAME}@${VERSION}" version >/dev/null 2>&1; then
+            echo "::notice::${NAME}@${VERSION} already on npm — skipping publish (no-op)."
+          else
+            echo "Publishing ${NAME}@${VERSION}…"
+            npm publish --access public
+          fi
