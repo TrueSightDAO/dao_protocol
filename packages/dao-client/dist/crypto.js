@@ -21,15 +21,6 @@ export class CryptoUtils {
         };
     }
     /**
-     * Synchronous key generation — only works if keys were previously generated
-     * and stored. Falls back to async generation.
-     */
-    generateKeyPairSync() {
-        // This is a placeholder — actual sync generation isn't possible with Web Crypto.
-        // The constructor calls this, but we handle it by checking storage first.
-        throw new Error('Use generateKeyPair() (async) or load from storage');
-    }
-    /**
      * Sign a message string with the given private key (base64 PKCS#8).
      */
     async sign(privateKeyBase64, message) {

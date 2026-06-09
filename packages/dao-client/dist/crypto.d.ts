@@ -11,14 +11,6 @@ export declare class CryptoUtils {
         privateKey: string;
     }>;
     /**
-     * Synchronous key generation — only works if keys were previously generated
-     * and stored. Falls back to async generation.
-     */
-    generateKeyPairSync(): {
-        publicKey: string;
-        privateKey: string;
-    };
-    /**
      * Sign a message string with the given private key (base64 PKCS#8).
      */
     sign(privateKeyBase64: string, message: string): Promise<string>;

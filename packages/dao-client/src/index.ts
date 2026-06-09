@@ -18,7 +18,12 @@ import { StorageManager } from './storage';
 export interface DaoClientOptions {
   edgarBase?: string;
   verifyUrl?: string;
+  /** Prefix used to derive storage keys (default: 'truesight_dao_'). Ignored when publicKeyKey/privateKeyKey are set. */
   storagePrefix?: string;
+  /** Explicit localStorage key for the public key. Takes precedence over storagePrefix. */
+  publicKeyKey?: string;
+  /** Explicit localStorage key for the private key. Takes precedence over storagePrefix. */
+  privateKeyKey?: string;
   generationSource?: string;
 }
 
@@ -62,12 +67,15 @@ export class DaoClient {
   constructor(options: DaoClientOptions = {}) {
     const edgarBase = options.edgarBase || 'https://edgar.truesight.me';
     const verifyUrl = options.verifyUrl || 'https://dapp.truesight.me/verify_request.html';
-    const storagePrefix = options.storagePrefix || 'truesight_dao_';
 
     this.crypto = new CryptoUtils();
     this.payloadBuilder = new PayloadBuilder();
     this.edgar = new EdgarClient(edgarBase, verifyUrl);
-    this.storage = new StorageManager(storagePrefix);
+    this.storage = new StorageManager({
+      publicKeyKey: options.publicKeyKey,
+      privateKeyKey: options.privateKeyKey,
+      prefix: options.storagePrefix,
+    });
 
     // generationSource: explicit param > window.location > fallback
     if (options.generationSource) {
