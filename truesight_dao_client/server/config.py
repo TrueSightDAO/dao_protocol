@@ -139,6 +139,17 @@ class Settings(BaseSettings):
             setattr(self, field, _resolve_sa_path(filename, creds_dirs))
         return self
 
+    @model_validator(mode="after")
+    def _guard_sk_live_in_development(self) -> "Settings":
+        """Safety backstop: refuse to boot in development mode with a live Stripe key."""
+        if self.environment == "development" and self.stripe_secret_key.startswith("sk_live_"):
+            raise ValueError(
+                "REFUSED: environment=development but stripe_secret_key starts with sk_live_. "
+                "Set DAO_PROTOCOL_STRIPE_SECRET_KEY to a test key (sk_test_...) or switch to "
+                "environment=production."
+            )
+        return self
+
 
 @lru_cache
 def get_settings() -> Settings:
