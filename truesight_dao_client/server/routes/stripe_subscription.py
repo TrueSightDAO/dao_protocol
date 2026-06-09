@@ -40,7 +40,7 @@ async def stripe_subscription_webhook(request: Request) -> Response:
     try:
         import stripe
 
-        event = stripe.Webhook.construct_event(
+        event_obj = stripe.Webhook.construct_event(
             payload=payload,
             sig_header=sig_header,
             secret=settings.stripe_webhook_secret,
@@ -50,6 +50,8 @@ async def stripe_subscription_webhook(request: Request) -> Response:
     except stripe.error.SignatureVerificationError:
         return JSONResponse({"status": "error", "error": "invalid signature"}, status_code=400)
 
+    # Convert StripeObject to a plain dict so .get() works reliably
+    event = stripe.util.convert_to_dict(event_obj)
     event_type = event.get("type", "")
     data = event.get("data", {}).get("object", {})
 
