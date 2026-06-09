@@ -99,6 +99,10 @@ class Settings(BaseSettings):
     # (box .env). Empty → MINTED-QR checkout returns an error (gate-off safe).
     stripe_secret_key: str = ""
 
+    # Stripe webhook signing secret for subscription webhook verification. From
+    # DAO_PROTOCOL_STRIPE_WEBHOOK_SECRET (box .env). Empty → webhook verification will fail.
+    stripe_webhook_secret: str = ""
+
     # GitHub PAT for /dao attachment uploads to TrueSightDAO repos (DAO_PROTOCOL_GITHUB_PAT).
     github_pat: str = ""
 
@@ -137,6 +141,17 @@ class Settings(BaseSettings):
             if field in self.model_fields_set and getattr(self, field):
                 continue
             setattr(self, field, _resolve_sa_path(filename, creds_dirs))
+        return self
+
+    @model_validator(mode="after")
+    def _guard_sk_live_in_development(self) -> "Settings":
+        """Safety backstop: refuse to boot in development mode with a live Stripe key."""
+        if self.environment == "development" and self.stripe_secret_key.startswith("sk_live_"):
+            raise ValueError(
+                "REFUSED: environment=development but stripe_secret_key starts with sk_live_. "
+                "Set DAO_PROTOCOL_STRIPE_SECRET_KEY to a test key (sk_test_...) or switch to "
+                "environment=production."
+            )
         return self
 
 
