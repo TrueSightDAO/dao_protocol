@@ -51,7 +51,9 @@ async def stripe_subscription_webhook(request: Request) -> Response:
         return JSONResponse({"status": "error", "error": "invalid signature"}, status_code=400)
 
     # Convert StripeObject to a plain dict so .get() works reliably
-    event = stripe.util.convert_to_dict(event_obj)
+    # json.loads(str(obj)) is the standard pattern for latest stripe-python SDK
+    import json as _json
+    event = _json.loads(str(event_obj))
     event_type = event.get("type", "")
     data = event.get("data", {}).get("object", {})
 
