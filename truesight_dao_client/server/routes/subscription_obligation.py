@@ -232,3 +232,65 @@ def _create_obligation(
         }
     else:
         return {"status": "error", "error": "Failed to append obligation"}
+
+
+@router.get("/subscription/obligations")
+async def list_obligations() -> JSONResponse:
+    """Return all PENDING obligations from the fulfillment queue."""
+    try:
+        pending = queue.list_pending()
+        return JSONResponse({"status": "success", "obligations": pending})
+    except Exception as exc:
+        return JSONResponse({"status": "error", "error": str(exc)}, status_code=500)
+
+
+@router.post("/subscription/fulfill")
+async def fulfill_obligation(request: Request) -> JSONResponse:
+    """Mark a PENDING obligation as FULFILLED.
+
+    Accepts form params: invoice_id, fulfilled_by, tracking_number.
+    """
+    invoice_id = (request.query_params.get("invoice_id") or "").strip()
+    fulfilled_by = (request.query_params.get("fulfilled_by") or "").strip()
+    tracking_number = (request.query_params.get("tracking_number") or "").strip()
+
+    if not invoice_id:
+        try:
+            form = await request.form()
+            invoice_id = str(form.get("invoice_id") or "").strip()
+            fulfilled_by = fulfilled_by or str(form.get("fulfilled_by") or "").strip()
+            tracking_number = tracking_number or str(form.get("tracking_number") or "").strip()
+        except Exception:
+            pass
+
+    if not invoice_id:
+        return JSONResponse(
+            {"status": "error", "error": "invoice_id required"},
+            status_code=400,
+        )
+    if not fulfilled_by:
+        return JSONResponse(
+            {"status": "error", "error": "fulfilled_by required"},
+            status_code=400,
+        )
+    if not tracking_number:
+        return JSONResponse(
+            {"status": "error", "error": "tracking_number required"},
+            status_code=400,
+        )
+
+    try:
+        ok = queue.mark_fulfilled(
+            invoice_id=invoice_id,
+            fulfilled_by=fulfilled_by,
+            tracking_number=tracking_number,
+        )
+        if ok:
+            return JSONResponse({"status": "fulfilled", "invoice_id": invoice_id})
+        else:
+            return JSONResponse(
+                {"status": "error", "error": "Invoice not found in queue"},
+                status_code=404,
+            )
+    except Exception as exc:
+        return JSONResponse({"status": "error", "error": str(exc)}, status_code=500)
