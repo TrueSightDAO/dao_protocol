@@ -208,6 +208,121 @@ export class DaoClient {
   }
 
   /**
+   * Submit a [CREDENTIALING ATTESTATION EVENT] — used by credentialing
+   * programs (Butterfly Effect Club, capoeira Tribo Mirim Bahia, etc.)
+   * to attest that a participant has completed a program milestone.
+   *
+   * The attestor (admin/teacher) signs this event with their own key.
+   * The tokenomics GAS handler picks it up, verifies the attestor is
+   * authorized (sheet editor), and commits identity.json +
+   * attestations/<ts>.json to lineage-credentials.
+   *
+   * @see CREDENTIALING_PLATFORM.md §4c for the event spec
+   * @see butterfly-effect-club/PROPOSAL.md §6.1 for payload format
+   */
+  async submitAttestation(options: {
+    /** Program slug, e.g. 'butterfly-effect' or 'tribomirim' */
+    program: string;
+    /** Type of attestation, e.g. 'program-completion', 'program-admission' */
+    attestationType: string;
+    /** The participant's public key (base64 SPKI) */
+    attesteePublicKey: string;
+    /** The participant's display name */
+    attesteeName: string;
+    /** ISO 8601 timestamp of when the attestation was captured */
+    capturedAt?: string;
+    /** Program year, e.g. '2025-2026' */
+    programYear?: string;
+    /** URL of the source program/roster */
+    sourceUrl?: string;
+    /** Optional JSON payload with additional metadata */
+    payload?: Record<string, unknown>;
+    /** Override the generation source URL */
+    generationSource?: string;
+  }): Promise<SubmitEventResponse> {
+    const fields: Record<string, unknown> = {
+      Program: options.program,
+      'Attestation Type': options.attestationType,
+      'Attestor Public Key': this.publicKey,
+      'Attestee Public Key': options.attesteePublicKey,
+      'Attestee Name': options.attesteeName,
+    };
+
+    if (options.capturedAt) {
+      fields['Captured At'] = options.capturedAt;
+    }
+    if (options.programYear) {
+      fields['Program Year'] = options.programYear;
+    }
+    if (options.sourceUrl) {
+      fields['Source URL'] = options.sourceUrl;
+    }
+    if (options.payload) {
+      fields['Payload JSON'] = JSON.stringify(options.payload, null, 2);
+    }
+
+    return this.submitEvent({
+      eventType: 'CREDENTIALING ATTESTATION EVENT',
+      fields,
+      generationSource: options.generationSource,
+    });
+  }
+
+  /**
+   * Submit a [CREDENTIALING QUALIFICATION EVENT] — used for live-cohort
+   * admission (the first of a two-event path: qualification then attestation).
+   *
+   * For alumni (graduation_date in the past), use submitAttestation() directly.
+   * For live cohorts, call submitQualification() on admission and
+   * submitAttestation() on completion.
+   *
+   * @see CREDENTIALING_PLATFORM.md §4b for the event spec
+   */
+  async submitQualification(options: {
+    /** Program slug, e.g. 'butterfly-effect' or 'tribomirim' */
+    program: string;
+    /** The participant's public key (base64 SPKI) */
+    participantPublicKey: string;
+    /** The participant's display name */
+    participantName: string;
+    /** ISO 8601 timestamp */
+    capturedAt?: string;
+    /** Program year, e.g. '2025-2026' */
+    programYear?: string;
+    /** URL of the source program/roster */
+    sourceUrl?: string;
+    /** Optional JSON payload with additional metadata */
+    payload?: Record<string, unknown>;
+    /** Override the generation source URL */
+    generationSource?: string;
+  }): Promise<SubmitEventResponse> {
+    const fields: Record<string, unknown> = {
+      Program: options.program,
+      'Practitioner Public Key': options.participantPublicKey,
+      'Practitioner Name': options.participantName,
+    };
+
+    if (options.capturedAt) {
+      fields['Captured At'] = options.capturedAt;
+    }
+    if (options.programYear) {
+      fields['Program Year'] = options.programYear;
+    }
+    if (options.sourceUrl) {
+      fields['Source URL'] = options.sourceUrl;
+    }
+    if (options.payload) {
+      fields['Payload JSON'] = JSON.stringify(options.payload, null, 2);
+    }
+
+    return this.submitEvent({
+      eventType: 'CREDENTIALING QUALIFICATION EVENT',
+      fields,
+      generationSource: options.generationSource,
+    });
+  }
+
+  /**
    * Register an email address with the DAO identity system.
    * Submits an [EMAIL REGISTERED EVENT] and returns the registration status.
    *
