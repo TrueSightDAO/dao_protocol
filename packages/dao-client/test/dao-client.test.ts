@@ -109,8 +109,8 @@ describe('DaoClient', () => {
 
       const client = new DaoClient({ edgarBase: 'https://edgar.test' });
       // Override the private key for signing
-      client.publicKey = 'test-public-key';
-      client.privateKey = 'test-private-key';
+      client.publicKey = 'dGVzdC1wdWJsaWMta2V5';
+      client.privateKey = 'dGVzdC1wcml2YXRlLWtleQ==';
 
       const result = await client.submitEvent({
         eventType: 'TEST EVENT',
@@ -134,8 +134,8 @@ describe('DaoClient', () => {
       globalThis.fetch = mockFetch;
 
       const client = new DaoClient({ edgarBase: 'https://edgar.test' });
-      client.publicKey = 'test-public-key';
-      client.privateKey = 'test-private-key';
+      client.publicKey = 'dGVzdC1wdWJsaWMta2V5';
+      client.privateKey = 'dGVzdC1wcml2YXRlLWtleQ==';
 
       const result = await client.submitEvent({
         eventType: 'TEST EVENT',
@@ -164,8 +164,8 @@ describe('DaoClient', () => {
       globalThis.fetch = mockFetch;
 
       const client = new DaoClient({ edgarBase: 'https://edgar.test' });
-      client.publicKey = 'test-public-key';
-      client.privateKey = 'test-private-key';
+      client.publicKey = 'dGVzdC1wdWJsaWMta2V5';
+      client.privateKey = 'dGVzdC1wcml2YXRlLWtleQ==';
 
       const result = await client.submitEvent({
         eventType: 'TEST EVENT',
@@ -189,8 +189,8 @@ describe('DaoClient', () => {
       globalThis.fetch = mockFetch;
 
       const client = new DaoClient({ edgarBase: 'https://edgar.test' });
-      client.publicKey = 'test-public-key';
-      client.privateKey = 'test-private-key';
+      client.publicKey = 'dGVzdC1wdWJsaWMta2V5';
+      client.privateKey = 'dGVzdC1wcml2YXRlLWtleQ==';
 
       const result = await client.submitEvent({
         eventType: 'TEST EVENT',
@@ -215,8 +215,8 @@ describe('DaoClient', () => {
       globalThis.fetch = mockFetch;
 
       const client = new DaoClient({ edgarBase: 'https://edgar.test' });
-      client.publicKey = 'test-public-key';
-      client.privateKey = 'test-private-key';
+      client.publicKey = 'dGVzdC1wdWJsaWMta2V5';
+      client.privateKey = 'dGVzdC1wcml2YXRlLWtleQ==';
 
       const result = await client.submitEvent({
         eventType: 'TEST EVENT',
@@ -233,8 +233,8 @@ describe('DaoClient', () => {
       globalThis.fetch = mockFetch;
 
       const client = new DaoClient({ edgarBase: 'https://edgar.test' });
-      client.publicKey = 'test-public-key';
-      client.privateKey = 'test-private-key';
+      client.publicKey = 'dGVzdC1wdWJsaWMta2V5';
+      client.privateKey = 'dGVzdC1wcml2YXRlLWtleQ==';
 
       const result = await client.submitEvent({
         eventType: 'TEST EVENT',
@@ -258,8 +258,8 @@ describe('DaoClient', () => {
       globalThis.fetch = mockFetch;
 
       const client = new DaoClient({ edgarBase: 'https://edgar.test' });
-      client.publicKey = 'test-public-key';
-      client.privateKey = 'test-private-key';
+      client.publicKey = 'dGVzdC1wdWJsaWMta2V5';
+      client.privateKey = 'dGVzdC1wcml2YXRlLWtleQ==';
 
       const result = await client.submitEvent({
         eventType: 'TEST EVENT',
@@ -290,8 +290,8 @@ describe('DaoClient', () => {
       globalThis.fetch = mockFetch;
 
       const client = new DaoClient({ edgarBase: 'https://edgar.test' });
-      client.publicKey = 'test-public-key';
-      client.privateKey = 'test-private-key';
+      client.publicKey = 'dGVzdC1wdWJsaWMta2V5';
+      client.privateKey = 'dGVzdC1wcml2YXRlLWtleQ==';
 
       const result = await client.registerEmail('test@example.com');
 
@@ -322,8 +322,8 @@ describe('DaoClient', () => {
       globalThis.fetch = mockFetch;
 
       const client = new DaoClient({ edgarBase: 'https://edgar.test' });
-      client.publicKey = 'test-public-key';
-      client.privateKey = 'test-private-key';
+      client.publicKey = 'dGVzdC1wdWJsaWMta2V5';
+      client.privateKey = 'dGVzdC1wcml2YXRlLWtleQ==';
 
       const result = await client.verifyEmail('test@example.com', 'abc123');
 
@@ -348,7 +348,7 @@ describe('DaoClient', () => {
       globalThis.fetch = mockFetch;
 
       const client = new DaoClient({ edgarBase: 'https://edgar.test' });
-      client.publicKey = 'test-public-key';
+      client.publicKey = 'dGVzdC1wdWJsaWMta2V5';
 
       const result = await client.checkRegistration();
 
@@ -370,7 +370,7 @@ describe('DaoClient', () => {
       globalThis.fetch = mockFetch;
 
       const client = new DaoClient({ edgarBase: 'https://edgar.test' });
-      client.publicKey = 'test-public-key';
+      client.publicKey = 'dGVzdC1wdWJsaWMta2V5';
 
       const result = await client.checkRegistration();
 
@@ -391,7 +391,7 @@ describe('DaoClient', () => {
       globalThis.fetch = mockFetch;
 
       const client = new DaoClient({ edgarBase: 'https://edgar.test' });
-      client.publicKey = 'test-public-key';
+      client.publicKey = 'dGVzdC1wdWJsaWMta2V5';
 
       const result = await client.checkRegistration();
 
@@ -453,6 +453,7 @@ describe('EdgarClient', () => {
             applicable: true,
             ok: false,
             error: 'Public key mismatch',
+            pubkey_mismatch: true,
           },
         }),
         { status: 422 }
@@ -479,7 +480,7 @@ describe('EdgarClient', () => {
       globalThis.fetch = mockFetch;
 
       const client = new EdgarClient('https://edgar.test', 'https://dapp.test/verify');
-      const result = await client.checkRegistration('test-public-key');
+      const result = await client.checkRegistration('dGVzdC1wdWJsaWMta2V5');
 
       expect(result.registered).toBe(true);
       expect(result.contributor_name).toBe('Test User');
@@ -498,7 +499,7 @@ describe('EdgarClient', () => {
       globalThis.fetch = mockFetch;
 
       const client = new EdgarClient('https://edgar.test', 'https://dapp.test/verify');
-      const result = await client.checkRegistration('test-public-key');
+      const result = await client.checkRegistration('dGVzdC1wdWJsaWMta2V5');
 
       expect(result.registered).toBe(false);
       expect(result.pending_verification).toBe(true);
@@ -509,7 +510,7 @@ describe('EdgarClient', () => {
       globalThis.fetch = mockFetch;
 
       const client = new EdgarClient('https://edgar.test', 'https://dapp.test/verify');
-      const result = await client.checkRegistration('test-public-key');
+      const result = await client.checkRegistration('dGVzdC1wdWJsaWMta2V5');
 
       expect(result.registered).toBe(false);
       expect(result.error).toContain('Network error');
