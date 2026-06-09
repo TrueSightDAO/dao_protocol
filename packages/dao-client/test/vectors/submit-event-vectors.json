@@ -84,8 +84,7 @@
     "eventType": "TEST EVENT",
     "fields": {
       "Name": "test",
-      "NullField": null,
-      "UndefinedField": undefined
+      "NullField": null
     },
     "expectedCanonicalPattern": "^\\[TEST EVENT\\]\\n- Timestamp: \\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z\\n- Name: test\\n--------$",
     "description": "Null and undefined fields are skipped."
