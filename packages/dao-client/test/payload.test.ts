@@ -212,9 +212,13 @@ describe('PayloadBuilder', () => {
           }).toThrow(vector.expectedError);
         } else {
           // Should match the pattern
+          // Convert \n in JSON strings to actual newlines
+          const fields = JSON.parse(JSON.stringify(vector.fields), (key, val) =>
+            typeof val === 'string' ? val.replace(/\\n/g, '\n') : val
+          );
           const result = builder.buildSubmitEvent(
             vector.eventType,
-            vector.fields as Record<string, unknown>
+            fields as Record<string, unknown>
           );
           const pattern = new RegExp(vector.expectedCanonicalPattern);
           expect(result).toMatch(pattern);

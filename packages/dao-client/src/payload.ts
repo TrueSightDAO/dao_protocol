@@ -95,7 +95,7 @@ export class PayloadBuilder {
    */
   validateFieldValues(fields: Record<string, unknown>): void {
     // Match [<any word ending in EVENT>] — case-insensitive
-    const eventTagPattern = /\[[A-Za-z]+\s+EVENT\]/i;
+    const eventTagPattern = /\[[A-Za-z]+(?:\s+[A-Za-z]+)*\s+EVENT\]/i;
 
     for (const [key, rawValue] of Object.entries(fields)) {
       if (rawValue === undefined || rawValue === null) continue;

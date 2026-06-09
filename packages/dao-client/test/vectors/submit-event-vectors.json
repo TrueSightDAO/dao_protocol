@@ -33,7 +33,11 @@
     "eventType": "PRACTICE EVENT",
     "fields": {
       "Program": "capoeira-tribo-mirim",
-      "Moves Practiced": ["ginga", "au", "cocorinha"]
+      "Moves Practiced": [
+        "ginga",
+        "au",
+        "cocorinha"
+      ]
     },
     "expectedCanonicalPattern": "^\\[PRACTICE EVENT\\]\\n- Timestamp: \\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z\\n- Program: capoeira-tribo-mirim\\n- Moves Practiced: ginga, au, cocorinha\\n--------$",
     "description": "Practice event with an array field (joined with comma+space)."
@@ -85,7 +89,7 @@
     "fields": {
       "Name": "test",
       "NullField": null,
-      "UndefinedField": undefined
+      "UndefinedField": null
     },
     "expectedCanonicalPattern": "^\\[TEST EVENT\\]\\n- Timestamp: \\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z\\n- Name: test\\n--------$",
     "description": "Null and undefined fields are skipped."
@@ -94,7 +98,10 @@
     "name": "event with object field value",
     "eventType": "CONFIG EVENT",
     "fields": {
-      "Settings": {"theme": "dark", "notifications": true}
+      "Settings": {
+        "theme": "dark",
+        "notifications": true
+      }
     },
     "expectedCanonicalPattern": "^\\[CONFIG EVENT\\]\\n- Timestamp: \\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z\\n- Settings: \\{\\\"theme\\\":\\\"dark\\\",\\\"notifications\\\":true\\}\\n--------$",
     "description": "Object values are JSON-stringified."
