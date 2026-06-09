@@ -18,7 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .. import __version__
 from .config import Settings, get_settings
-from .routes import dao, health, proxy, qr_code_check, shipping, stripe_order_sync, tracking
+from .routes import dao, health, proxy, qr_code_check, shipping, stripe_order_sync, stripe_subscription, tracking
 
 
 def _configure_bugsnag(settings: Settings) -> bool:
