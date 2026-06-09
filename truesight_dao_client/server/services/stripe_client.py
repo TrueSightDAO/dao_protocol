@@ -66,3 +66,22 @@ def retrieve_session_full(session_id: str):
         session_id,
         expand=["line_items", "line_items.data.price.product", "payment_intent", "payment_intent.charges"],
     )
+
+
+def retrieve_subscription(subscription_id: str):
+    """Retrieve a subscription with expanded items + product data."""
+    s = _stripe()
+    if s is None:
+        return None
+    return s.Subscription.retrieve(
+        subscription_id,
+        expand=["items.data.price.product", "latest_invoice"],
+    )
+
+
+def retrieve_customer(customer_id: str):
+    """Retrieve a customer."""
+    s = _stripe()
+    if s is None:
+        return None
+    return s.Customer.retrieve(customer_id)
