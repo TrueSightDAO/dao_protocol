@@ -22,27 +22,20 @@ def write_subscription_row(
 
     Placeholder implementation: logs to stdout.
     """
-    logger.info(
-        "SANDBOX sheet: customer_email=%s subscription_id=%s invoice_id=%s status=%s",
-        customer_email,
-        subscription_id,
-        invoice_id,
-        status,
-    )
+    msg = f"SANDBOX sheet: customer_email={customer_email} subscription_id={subscription_id} invoice_id={invoice_id} status={status}"
+    logger.info(msg)
+    print(msg, flush=True)
 
 
 def mark_subscription_failed(subscription_id: str, invoice_id: str = "") -> None:
     """Mark a subscription row as failed in the SANDBOX sheet."""
-    logger.info(
-        "SANDBOX sheet: marking subscription_id=%s invoice_id=%s as failed",
-        subscription_id,
-        invoice_id,
-    )
+    msg = f"SANDBOX sheet: marking subscription_id={subscription_id} invoice_id={invoice_id} as failed"
+    logger.info(msg)
+    print(msg, flush=True)
 
 
 def mark_subscription_cancelled(subscription_id: str) -> None:
     """Mark a subscription row as cancelled in the SANDBOX sheet."""
-    logger.info(
-        "SANDBOX sheet: marking subscription_id=%s as cancelled",
-        subscription_id,
-    )
+    msg = f"SANDBOX sheet: marking subscription_id={subscription_id} as cancelled"
+    logger.info(msg)
+    print(msg, flush=True)
