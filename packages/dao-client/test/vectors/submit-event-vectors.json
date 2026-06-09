@@ -42,7 +42,9 @@
     "name": "event with multi-line value",
     "eventType": "NOTE EVENT",
     "fields": {
-      "Description": "Line one\\nLine two\\nLine three"
+      "Description": "Line one
+Line two
+Line three"
     },
     "expectedCanonicalPattern": "^\\[NOTE EVENT\\]\\n- Timestamp: \\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z\\n- Description: Line one\\n  Line two\\n  Line three\\n--------$",
     "description": "Multi-line values get indented continuation lines."
@@ -85,7 +87,7 @@
     "fields": {
       "Name": "test",
       "NullField": null,
-      "UndefinedField": undefined
+      "UndefinedField": null
     },
     "expectedCanonicalPattern": "^\\[TEST EVENT\\]\\n- Timestamp: \\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z\\n- Name: test\\n--------$",
     "description": "Null and undefined fields are skipped."
