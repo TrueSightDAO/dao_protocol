@@ -99,6 +99,10 @@ class Settings(BaseSettings):
     # (box .env). Empty → MINTED-QR checkout returns an error (gate-off safe).
     stripe_secret_key: str = ""
 
+    # Stripe webhook signing secret for subscription webhook verification. From
+    # DAO_PROTOCOL_STRIPE_WEBHOOK_SECRET (box .env). Empty → webhook verification will fail.
+    stripe_webhook_secret: str = ""
+
     # GitHub PAT for /dao attachment uploads to TrueSightDAO repos (DAO_PROTOCOL_GITHUB_PAT).
     github_pat: str = ""
 
