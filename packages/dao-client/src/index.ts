@@ -79,16 +79,48 @@ export class DaoClient {
       this.generationSource = 'https://truesight.me';
     }
 
-    // Load existing keys or generate new ones
+    // Load existing keys from storage (no async generation in constructor)
     const existing = this.storage.loadKeyPair();
     if (existing) {
       this.publicKey = existing.publicKey;
       this.privateKey = existing.privateKey;
     } else {
-      const fresh = this.crypto.generateKeyPairSync();
-      this.publicKey = fresh.publicKey;
-      this.privateKey = fresh.privateKey;
-      this.storage.saveKeyPair(fresh);
+      // Placeholder — keys will be generated on first ensureKeys() or generateKeyPair() call
+      this.publicKey = '';
+      this.privateKey = '';
+    }
+  }
+
+  /**
+   * Static async factory. Creates a DaoClient and ensures a keypair exists
+   * (loading from storage or generating a new one).
+   *
+   * Usage:
+   *   const client = await DaoClient.create();
+   */
+  static async create(options: DaoClientOptions = {}): Promise<DaoClient> {
+    const client = new DaoClient(options);
+    await client.ensureKeys();
+    return client;
+  }
+
+  /**
+   * Ensure a keypair exists — loads from storage or generates a new one.
+   * Safe to call multiple times; no-op if keys already loaded.
+   */
+  async ensureKeys(): Promise<void> {
+    if (this.publicKey && this.privateKey) {
+      return; // already have keys
+    }
+    const existing = this.storage.loadKeyPair();
+    if (existing) {
+      this.publicKey = existing.publicKey;
+      this.privateKey = existing.privateKey;
+    } else {
+      const kp = await this.crypto.generateKeyPair();
+      this.publicKey = kp.publicKey;
+      this.privateKey = kp.privateKey;
+      this.storage.saveKeyPair(kp);
     }
   }
 

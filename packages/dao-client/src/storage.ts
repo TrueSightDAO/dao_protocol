@@ -18,14 +18,28 @@ export class StorageManager {
 
   /**
    * Load the keypair from localStorage.
+   * Falls back to legacy unprefixed keys (`publicKey`/`privateKey`) and
+   * migrates them to the new prefixed keys on read.
    */
   loadKeyPair(): KeyPair | null {
     try {
-      const publicKey = localStorage.getItem(this.publicKeyKey);
-      const privateKey = localStorage.getItem(this.privateKeyKey);
+      // Try prefixed keys first
+      let publicKey = localStorage.getItem(this.publicKeyKey);
+      let privateKey = localStorage.getItem(this.privateKeyKey);
       if (publicKey && privateKey) {
         return { publicKey, privateKey };
       }
+
+      // Fall back to legacy unprefixed keys
+      publicKey = localStorage.getItem('publicKey');
+      privateKey = localStorage.getItem('privateKey');
+      if (publicKey && privateKey) {
+        // Migrate to new prefixed keys
+        localStorage.setItem(this.publicKeyKey, publicKey);
+        localStorage.setItem(this.privateKeyKey, privateKey);
+        return { publicKey, privateKey };
+      }
+
       return null;
     } catch {
       return null;
