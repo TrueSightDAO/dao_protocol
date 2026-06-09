@@ -18,7 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .. import __version__
 from .config import Settings, get_settings
-from .routes import dao, health, proxy, qr_code_check, shipping, stripe_order_sync, stripe_subscription, tracking
+from .routes import dao, health, proxy, qr_code_check, shipping, stripe_order_sync, stripe_subscription, subscription_obligation, tracking
 
 
 def _configure_bugsnag(settings: Settings) -> bool:
@@ -70,6 +70,7 @@ def create_app() -> FastAPI:
     app.include_router(qr_code_check.router, tags=["qr_code_check"])
     app.include_router(stripe_order_sync.router, tags=["stripe_order_sync"])
     app.include_router(stripe_subscription.router, tags=["stripe_subscription"])
+    app.include_router(subscription_obligation.router, tags=["subscription_obligation"])
     return app
 
 
