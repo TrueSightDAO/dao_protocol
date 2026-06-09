@@ -187,7 +187,15 @@ def consume_verification(public_key_b64: str, verification_key: str, email: str 
             return {"outcome": "already_consumed_same_key", "row": sheet_row}
 
         now = _now()
-        full = list(row) + [""] * (COL_VK_CONSUMED - len(row))
+        full = list(row)
+        # Truncate to A:H (COL_VK_CONSUMED = 8 columns). _fetch_row_a_i()
+        # returns 9 columns when column I was previously stamped by
+        # update_email_last_sent(), which would cause Google Sheets to
+        # reject the A:H-range write with "tried writing to column [I]".
+        if len(full) > COL_VK_CONSUMED:
+            full = full[:COL_VK_CONSUMED]
+        else:
+            full += [""] * (COL_VK_CONSUMED - len(full))
         full[COL_LAST_ACTIVE - 1] = now
         full[COL_STATUS - 1] = "ACTIVE"
         full[COL_VK_CONSUMED - 1] = now
