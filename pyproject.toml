@@ -47,6 +47,7 @@ truesight-dao-cache-freight = "truesight_dao_client.cache.freight:main"
 truesight-dao-cache-treasury = "truesight_dao_client.cache.treasury:main"
 truesight-dao-cache-compositions = "truesight_dao_client.cache.compositions:main"
 truesight-dao-cache-contributors = "truesight_dao_client.cache.contributors:main"
+truesight-dao-register-qr-code = "truesight_dao_client.modules.register_qr_code:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
