@@ -23,6 +23,7 @@ import json
 import logging
 import re
 import secrets
+import time
 from datetime import datetime, timezone
 
 import requests
@@ -206,25 +207,42 @@ def _gas_json_ok(resp) -> bool:
         return False
 
 
+# Bounded retry for the cache-refresh fan-out. The Rails original ran on Sidekiq with
+# retry backoff specifically to ride out GAS cold starts / transient 5xx; mirror that here
+# so a single transient failure doesn't leave dao_members.json stale until the daily 03:00
+# cron. Waits sit between attempts → 3 attempts total (immediate, +2s, +6s).
+_CACHE_REFRESH_BACKOFFS_S = (2, 6)
+_CACHE_REFRESH_TIMEOUT_S = 30
+
+
 def _trigger_dao_members_cache_refresh() -> dict:
     """Port of Rails `DaoMembersCacheRefreshWorker` — reuses the email-verification GAS publisher
-    (same Apps Script project) with `action=refresh_dao_members_cache`. Best-effort: caller logs
-    failures and proceeds (activation on the sheet is independent)."""
+    (same Apps Script project) with `action=refresh_dao_members_cache`. Best-effort with bounded
+    retries (3 attempts, 2s/6s backoff) so a transient GAS cold-start/5xx doesn't leave
+    dao_members.json stale until the daily cron; caller logs the final failure and proceeds (the
+    sheet activation is independent)."""
     s = get_settings()
     url = (s.email_verification_gas_webhook_url or "").strip()
     secret = (s.email_verification_gas_secret or "").strip()
     if not url or not secret:
         return {"ok": False, "error": "EMAIL_VERIFICATION_GAS_WEBHOOK_URL / SECRET not set on the server."}
     headers = {"User-Agent": "TrueSight-dao_protocol/DaoMembersCacheRefresh"}
-    try:
-        resp = requests.get(url.rstrip("/"),
-                            params={"action": "refresh_dao_members_cache", "secret": secret},
-                            timeout=60, headers=headers, allow_redirects=True)
-        if _gas_json_ok(resp):
-            return {"ok": True}
-        return {"ok": False, "error": f"GAS cache refresh HTTP {resp.status_code}"}
-    except requests.RequestException as exc:
-        return {"ok": False, "error": str(exc)}
+    attempts = len(_CACHE_REFRESH_BACKOFFS_S) + 1
+    last_err = None
+    for attempt in range(attempts):
+        if attempt:
+            time.sleep(_CACHE_REFRESH_BACKOFFS_S[attempt - 1])
+        try:
+            resp = requests.get(url.rstrip("/"),
+                                params={"action": "refresh_dao_members_cache", "secret": secret},
+                                timeout=_CACHE_REFRESH_TIMEOUT_S, headers=headers, allow_redirects=True)
+            if _gas_json_ok(resp):
+                return {"ok": True, "attempts": attempt + 1}
+            last_err = f"GAS cache refresh HTTP {resp.status_code}"
+        except requests.RequestException as exc:
+            last_err = str(exc)
+        logger.info("dao_members cache refresh attempt %d/%d failed: %s", attempt + 1, attempts, last_err)
+    return {"ok": False, "error": last_err, "attempts": attempts}
 
 
 def _trigger_verification_email(email: str, verification_key: str, return_url: str | None) -> dict:
