@@ -89,3 +89,59 @@ def test_dao_route_returns_422_on_email_failure(monkeypatch):
     r = client.post("/dao/submit_contribution", data={"text": REG})
     assert r.status_code == 422
     assert r.json()["error"] == "boom"
+
+
+# --- dao_members cache-refresh retry/backoff (2026-06-12: durability of the #45 port) ---
+import types as _types  # noqa: E402
+
+
+def _refresh_settings(url="https://gas.example/exec", secret="s3cr3t"):
+    return _types.SimpleNamespace(
+        email_verification_gas_webhook_url=url, email_verification_gas_secret=secret
+    )
+
+
+class _Resp:
+    def __init__(self, status):
+        self.status_code = status
+
+
+def test_cache_refresh_retries_then_succeeds(monkeypatch):
+    monkeypatch.setattr(er, "get_settings", lambda: _refresh_settings())
+    monkeypatch.setattr(er, "_gas_json_ok", lambda r: getattr(r, "status_code", 0) == 200)
+    monkeypatch.setattr(er.time, "sleep", lambda *_: None)  # no real backoff in tests
+    calls = {"n": 0}
+
+    def fake_get(*a, **k):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise er.requests.RequestException("GAS cold start")
+        return _Resp(200)
+
+    monkeypatch.setattr(er.requests, "get", fake_get)
+    out = er._trigger_dao_members_cache_refresh()
+    assert out["ok"] is True and out["attempts"] == 2 and calls["n"] == 2
+
+
+def test_cache_refresh_exhausts_retries(monkeypatch):
+    monkeypatch.setattr(er, "get_settings", lambda: _refresh_settings())
+    monkeypatch.setattr(er, "_gas_json_ok", lambda r: False)  # always "not ok"
+    monkeypatch.setattr(er.time, "sleep", lambda *_: None)
+    calls = {"n": 0}
+
+    def fake_get(*a, **k):
+        calls["n"] += 1
+        return _Resp(503)
+
+    monkeypatch.setattr(er.requests, "get", fake_get)
+    out = er._trigger_dao_members_cache_refresh()
+    assert out["ok"] is False and out["attempts"] == 3 and calls["n"] == 3
+    assert "503" in out["error"]
+
+
+def test_cache_refresh_noop_when_env_unset(monkeypatch):
+    monkeypatch.setattr(er, "get_settings", lambda: _refresh_settings(url="", secret=""))
+    calls = {"n": 0}
+    monkeypatch.setattr(er.requests, "get", lambda *a, **k: calls.update(n=calls["n"] + 1))
+    out = er._trigger_dao_members_cache_refresh()
+    assert out["ok"] is False and "not set" in out["error"] and calls["n"] == 0
