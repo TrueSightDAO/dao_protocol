@@ -2,7 +2,7 @@
 
 # dao_client
 
-Python client library + CLI for **TrueSight DAO**'s contribution server, **Edgar** ([`edgar.truesight.me`](https://edgar.truesight.me), source: [`TrueSightDAO/sentiment_importer`](https://github.com/TrueSightDAO/sentiment_importer)).
+Python client library + CLI for **TrueSight DAO**'s contribution server, **Edgar** ([`edgar.truesight.me`](https://edgar.truesight.me), source: [`TrueSightDAO/dao_client`](https://github.com/TrueSightDAO/dao_client) (Python/FastAPI, formerly dao_protocol)).
 
 Every public DAO action — contribution, inventory movement, notarization, QR update, tree planting, proposal vote, sale — is submitted as an **RSA-signed event payload** to Edgar's `POST /dao/submit_contribution` endpoint. The browser-side reference implementation lives in [`TrueSightDAO/dapp`](https://github.com/TrueSightDAO/dapp) (each HTML page under `dapp.truesight.me/`). This repo is the **terminal / script / automation** equivalent: same signing, same payload shape, same endpoint — just from Python instead of a browser tab.
 
@@ -84,7 +84,7 @@ Dry-run the third command with `--dry-run` first if you want to see the signed s
 
 ```text
   ┌─────────────┐                     ┌─────────────────────┐
-  │  your CLI   │   [EMAIL REGISTERED │ Edgar (Rails)       │
+  │  your CLI   │   [EMAIL REGISTERED │ Edgar (Python/FastAPI)       │
   │  auth.py    │──────── EVENT]─────▶│ edgar.truesight.me  │
   │             │   gen_src=127.0.0.1 │                     │
   │             │                     └──────────┬──────────┘
@@ -208,7 +208,7 @@ Four wrappers over the DAO's read-only data sources. Each one has a library API,
 
 The snapshot shipped by [`tokenomics#237`](https://github.com/TrueSightDAO/tokenomics/pull/237)'s `dao_members_cache_publisher.gs` is **live now** at `raw.githubusercontent.com/TrueSightDAO/treasury-cache/main/dao_members.json`. Refresh triggers:
 
-- [`sentiment_importer#1028`](https://github.com/TrueSightDAO/sentiment_importer/pull/1028) — Edgar enqueues `DaoMembersCacheRefreshWorker` on every successful `[EMAIL VERIFICATION EVENT]` activation. The worker GETs `?action=refresh_dao_members_cache&secret=…` on the publisher, which rebuilds the snapshot and commits to the treasury-cache repo.
+- [`sentiment_importer#1028`](https://github.com/TrueSightDAO/sentiment_importer/pull/1028) — Perch (Rails) enqueues `DaoMembersCacheRefreshWorker` (Sidekiq worker in sentiment_importer) on every successful `[EMAIL VERIFICATION EVENT]` activation. The worker GETs `?action=refresh_dao_members_cache&secret=…` on the publisher, which rebuilds the snapshot and commits to the treasury-cache repo.
 - `installDaoMembersCacheDailyTrigger()` — safety-net daily cron in the GAS. Cache self-heals if a Sidekiq enqueue drops.
 - Manual operator call: `publishDaoMembersCacheNow()` in the Apps Script editor.
 
@@ -368,7 +368,7 @@ The `.gitignore` covers `.env`, `.env.*`, and an exception for an optional `.env
 ## Related repos
 
 - [`TrueSightDAO/dapp`](https://github.com/TrueSightDAO/dapp) — browser-side reference implementation; one HTML page per signed event.
-- [`TrueSightDAO/sentiment_importer`](https://github.com/TrueSightDAO/sentiment_importer) — Edgar itself (Rails). Signature verify + sheet write logic: `app/services/dao_email_registration_service.rb`, `app/models/gdrive/contributors_digital_signatures.rb`.
+- [`TrueSightDAO/sentiment_importer`](https://github.com/TrueSightDAO/sentiment_importer) — the Rails Perch (sentiment_importer, formerly called "Edgar"). Signature verify + sheet write logic: `app/services/dao_email_registration_service.rb`, `app/models/gdrive/contributors_digital_signatures.rb`.
 - [`TrueSightDAO/tokenomics`](https://github.com/TrueSightDAO/tokenomics) — canonical [`SCHEMA.md`](https://github.com/TrueSightDAO/tokenomics/blob/main/SCHEMA.md) + Apps Script projects (`tdg_identity_management`, `tdg_inventory_management`, etc.) that maintain the Google Sheets ledger and publish the GitHub JSON caches.
 - [`TrueSightDAO/treasury-cache`](https://github.com/TrueSightDAO/treasury-cache) — pre-computed JSON snapshot of DAO off-chain treasury. Consumed by `cache.treasury`.
 - [`TrueSightDAO/agroverse-freight-audit`](https://github.com/TrueSightDAO/agroverse-freight-audit) — freight lane registry consumed by `cache.freight` and `dapp/shipping_planner.html`.
