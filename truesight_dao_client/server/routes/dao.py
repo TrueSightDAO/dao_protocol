@@ -20,12 +20,39 @@ from ..crypto import verify
 from ..services import github_upload
 from ..sheets import contributors_digital_signatures as sigs
 from ..sheets import telegram_raw_log
+from ..sheets import base as sheets_base
 
 _ACAO = {"Access-Control-Allow-Origin": "*"}
 
 router = APIRouter()
 
 _TX_SIG_RE = re.compile(r"Request Transaction ID:\s*([A-Za-z0-9+/=]+)")
+
+_OFFCHAIN_ID = "1GE7PUq-UT6x2rBN-Q2ksogbWpgyuh2SaxJyG_uEK6PU"
+
+# Events that require the signer to be a registered DAO governor
+_GOVERNOR_ONLY_EVENTS = [
+    "[PARTNER ADD EVENT]",
+    "[DAPP PERMISSION CHANGE EVENT]",
+]
+
+
+def _is_governor(contributor_name: str) -> bool:
+    """Check if a contributor name is registered as a DAO governor."""
+    if not contributor_name:
+        return False
+    try:
+        col = sheets_base.get_values(
+            _OFFCHAIN_ID,
+            f"Governors!A2:A",
+            key_path=sigs._key(),
+        )
+        for row in col:
+            if row and str(row[0]).strip().lower() == contributor_name.lower():
+                return True
+    except Exception:
+        pass
+    return False
 
 
 def _has_signature_format(text: str) -> bool:
@@ -68,6 +95,21 @@ async def submit_contribution(request: Request, background: BackgroundTasks) -> 
                  "error": "Duplicate submission (Request Transaction ID already processed)."},
                 status_code=409,
             )
+
+        # --- governor enforcement for restricted events ---
+        for gov_event in _GOVERNOR_ONLY_EVENTS:
+            if gov_event in text:
+                pk = verification_result.get("public_key", "") if verification_result else ""
+                entry = sigs.find_by_public_key(pk) if pk else None
+                name = entry.get("name", "") if entry else ""
+                if not _is_governor(name):
+                    return JSONResponse({
+                        "status": "error",
+                        "error": f"Only DAO governors may submit {gov_event}. "
+                                 f"Signer '{name or 'unknown'}' is not a registered governor.",
+                        "signature_verification": signature_verification,
+                    }, status_code=403)
+                break
 
     # --- log to Telegram Chat Logs (synchronous; user-visible state, no-race rule) ---
     telegram_raw_log.add_record(text or "[No Text Provided]",
