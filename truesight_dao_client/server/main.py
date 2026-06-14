@@ -17,7 +17,7 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 from .. import __version__
 from .config import Settings, get_settings
@@ -66,11 +66,13 @@ def create_app() -> FastAPI:
         max_age=7200,
     )
 
-    # Serve the static landing page at / (must be mounted before API routes so
-    # index.html is the root, but API routes take precedence via their prefixes).
+    # Serve the static landing page at / (exact root only — API routes take precedence).
     static_dir = Path(__file__).resolve().parent / "static"
-    if static_dir.is_dir():
-        app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
+    index_html = static_dir / "index.html"
+
+    @app.get("/", include_in_schema=False)
+    async def root():
+        return FileResponse(str(index_html))
 
     app.include_router(health.router, tags=["health"])
     app.include_router(proxy.router, tags=["proxy"])
