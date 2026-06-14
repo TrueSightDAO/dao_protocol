@@ -13,8 +13,11 @@ meta_checkout / newsletter / email_agent / proxy / qr_code routers here.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from .. import __version__
 from .config import Settings, get_settings
@@ -62,6 +65,13 @@ def create_app() -> FastAPI:
         allow_credentials=False,
         max_age=7200,
     )
+
+    # Serve the static landing page at / (must be mounted before API routes so
+    # index.html is the root, but API routes take precedence via their prefixes).
+    static_dir = Path(__file__).resolve().parent / "static"
+    if static_dir.is_dir():
+        app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
+
     app.include_router(health.router, tags=["health"])
     app.include_router(proxy.router, tags=["proxy"])
     app.include_router(tracking.router, tags=["tracking"])
