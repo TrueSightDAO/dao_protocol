@@ -35,6 +35,16 @@ def ping() -> dict:
     return _payload()
 
 
+@router.head("/ping")
+def ping_head() -> dict:
+    return _payload()
+
+
 @router.get("/healthz")
 def healthz() -> dict:
+    return _payload()
+
+
+@router.head("/healthz")
+def healthz_head() -> dict:
     return _payload()
