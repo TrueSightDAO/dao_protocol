@@ -62,7 +62,7 @@
 
         <div class="status-cards">
             <div class="card"><div class="label">Status</div><div class="value green">● Operational</div></div>
-            <div class="card"><div class="label">Version</div><div class="value">1.0.0</div></div>
+            <div class="card"><div class="label">Version</div><div class="value" id="version-value">—</div></div>
             <div class="card"><div class="label">Network</div><div class="value">Mainnet</div></div>
         </div>
 
@@ -440,6 +440,18 @@
         document.getElementById('sandbox-modal').addEventListener('click', function(e) {
             if (e.target === this) closeSandbox();
         });
+
+        // Fetch the live version (Git commit hash) from /ping and render as a clickable link
+        fetch('/ping')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                var ver = data.version || 'dev';
+                var el = document.getElementById('version-value');
+                el.innerHTML = '<a href="https://github.com/TrueSightDAO/dao_protocol/commit/' + ver + '" target="_blank" rel="noopener" style="color:#2b1d14; text-decoration:underline; text-underline-offset:2px;">' + ver + '</a>';
+            })
+            .catch(function() {
+                document.getElementById('version-value').textContent = 'unavailable';
+            });
     </script>
 </body>
 </html>
