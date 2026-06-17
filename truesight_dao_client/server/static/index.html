@@ -79,6 +79,114 @@
                 <div class="endpoint"><span class="method post">POST</span><span class="path">/stripe/subscription</span><span class="desc">Stripe subscription management</span></div>
                 <div class="endpoint"><span class="method post">POST</span><span class="path">/subscription/obligation</span><span class="desc">Subscription obligation check</span></div>
                 <div class="endpoint"><span class="method get">GET</span><span class="path">/qr/check/{code}</span><span class="desc">QR code lookup</span></div>
+                <div class="endpoint"><span class="method get">GET</span><span class="path">/dao/transactions</span><span class="desc">Query sales by partner, SKU, date range</span></div>
+                <div class="endpoint"><span class="method get">GET</span><span class="path">/dao/qr-codes</span><span class="desc">Query QR codes by manager, owner, SKU, status</span></div>
+                <div class="endpoint"><span class="method get">GET</span><span class="path">/dao/inventory-movements</span><span class="desc">Query inventory transfers by person, role, date</span></div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">DAO Query Endpoints</div>
+            <p style="color:#6f5a44; font-size:0.9rem; margin-bottom:1rem;">
+                Read-only query endpoints for DAO records. All name/partner fields support
+                <strong>case-insensitive substring matching</strong>. Results are capped at 100 rows by default (max 1000).
+            </p>
+
+            <div class="event-group">
+                <h3>Transactions</h3>
+                <div class="event-card">
+                    <div class="event-header" onclick="toggleCard(this)">
+                        <div class="name"><code>GET /dao/transactions</code> — Sales records by partner, SKU, or date</div>
+                        <div class="meta"><span class="toggle">▶</span></div>
+                    </div>
+                    <div class="event-body">
+                        <div class="attrs">Parameters: <code>partner</code> (substring), <code>sku</code> (substring), <code>from</code> (YYYYMMDD), <code>to</code> (YYYYMMDD), <code>limit</code> (1–1000)</div>
+                        <div class="payload-preview" id="preview-TRANSACTIONS"># Find all sales to SOHA
+curl "https://edgar.truesight.me/dao/transactions?partner=soha"
+
+# Response:
+{
+  "results": [
+    {
+      "date": "20260115",
+      "partner": "SOHA",
+      "sku": "ceremonial-cacao-fazenda-santa-ana-2023-200g",
+      "qty": 10,
+      "qr_code": "",
+      "value": 0,
+      "status": "",
+      "source_sheet": "QR Code Sales",
+      "source_row": 2
+    }
+  ],
+  "count": 1
+}</div>
+                    </div>
+                </div>
+
+                <h3>QR Codes</h3>
+                <div class="event-card">
+                    <div class="event-header" onclick="toggleCard(this)">
+                        <div class="name"><code>GET /dao/qr-codes</code> — QR codes by manager, owner, SKU, or status</div>
+                        <div class="meta"><span class="toggle">▶</span></div>
+                    </div>
+                    <div class="event-body">
+                        <div class="attrs">Parameters: <code>manager</code> (substring), <code>owner</code> (substring), <code>sku</code> (substring), <code>status</code> (exact: MINTED|SOLD|SAMPLE|GIFT), <code>limit</code> (1–1000)</div>
+                        <div class="payload-preview" id="preview-QR_CODES"># Find all QR codes managed by Kirsten
+curl "https://edgar.truesight.me/dao/qr-codes?manager=kirsten"
+
+# Response:
+{
+  "results": [
+    {
+      "qr_code": "2024OSCAR_20260121_12",
+      "sku": "oscar-bahia-ceremonial-cacao-200g",
+      "status": "MINTED",
+      "manager": "Kirsten",
+      "owner": "",
+      "price": "25",
+      "farm": "Oscar",
+      "year": "2024",
+      "ledger_name": "AGL#25",
+      "source_sheet": "Agroverse QR codes",
+      "source_row": 2
+    }
+  ],
+  "count": 1
+}</div>
+                    </div>
+                </div>
+
+                <h3>Inventory Movements</h3>
+                <div class="event-card">
+                    <div class="event-header" onclick="toggleCard(this)">
+                        <div class="name"><code>GET /dao/inventory-movements</code> — Inventory transfers by person, role, or date</div>
+                        <div class="meta"><span class="toggle">▶</span></div>
+                    </div>
+                    <div class="event-body">
+                        <div class="attrs">Parameters: <code>person</code> (substring), <code>role</code> (sender|recipient), <code>from</code> (YYYYMMDD), <code>to</code> (YYYYMMDD), <code>limit</code> (1–1000)</div>
+                        <div class="payload-preview" id="preview-INVENTORY_MOVEMENTS_QUERY"># Find all inventory movements involving David Campbell as recipient
+curl "https://edgar.truesight.me/dao/inventory-movements?person=campbell&role=recipient"
+
+# Response:
+{
+  "results": [
+    {
+      "date": "20260401",
+      "sender": "Gary",
+      "recipient": "David Campbell",
+      "sku": "ceremonial-cacao-fazenda-santa-ana-2023-200g",
+      "qty": 5,
+      "ledger_name": "AGL#25",
+      "status": "PROCESSED",
+      "source_sheet": "Inventory Movement",
+      "source_row": 4
+    }
+  ],
+  "count": 1
+}</div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -90,71 +198,50 @@
             </p>
 
             <div class="event-group">
-                <h3>Governance &amp; Treasury</h3>
+                <h3>Governance &amp; Identity</h3>
 
                 <div class="event-card">
                     <div class="event-header" onclick="toggleCard(this)">
-                        <div class="name"><code>[CONTRIBUTION EVENT]</code> — Record a contribution (time, money, or work)</div>
+                        <div class="name"><code>[CONTRIBUTION EVENT]</code> — Record a DAO contribution (time or USD)</div>
                         <div class="meta">
-                            <a class="page-link" href="https://dapp.truesight.me/contribution.html" target="_blank">contribution.html</a>
+                            <a class="page-link" href="https://dapp.truesight.me/report_contribution.html" target="_blank">report_contribution.html</a>
                             <span class="toggle">▶</span>
                         </div>
                     </div>
                     <div class="event-body">
-                        <div class="attrs">Attributes: <code>Contributor Name</code>, <code>Description</code>, <code>Type</code>, <code>Amount</code>, <code>Currency</code>, <code>Date</code>, <code>Ledger</code></div>
+                        <div class="attrs">Attributes: <code>Title</code>, <code>Body</code>, <code>PR URLs</code>, <code>Contributors</code>, <code>Amount</code>, <code>Type</code> (Time/USD), <code>TDG Issued</code></div>
                         <div class="payload-preview" id="preview-CONTRIBUTION_EVENT">[CONTRIBUTION EVENT]
-- Contributor Name: John Doe
-- Description: Built the landing page
-- Type: Time (Minutes)
+- Title: Fixed QR code scanner bug
+- Body: Resolved edge case with batch scanning
+- PR URLs: https://github.com/TrueSightDAO/truesight_autopilot/pull/42
+- Contributors: Sophia Truesight
 - Amount: 120
-- Currency: USD
-- Date: 2026-06-13
-- Ledger: AGL Treasury</div>
+- Type: Time (Minutes)
+- TDG Issued: 10</div>
                         <button class="sandbox-btn" onclick="openSandbox('CONTRIBUTION_EVENT')">Try in Sandbox →</button>
                     </div>
                 </div>
 
                 <div class="event-card">
                     <div class="event-header" onclick="toggleCard(this)">
-                        <div class="name"><code>[CAPITAL INJECTION EVENT]</code> — Record a capital injection into a ledger</div>
+                        <div class="name"><code>[REGISTER IDENTITY EVENT]</code> — Register a new DAO identity</div>
                         <div class="meta">
-                            <a class="page-link" href="https://dapp.truesight.me/capital_injection.html" target="_blank">capital_injection.html</a>
+                            <a class="page-link" href="https://dapp.truesight.me/register_identity.html" target="_blank">register_identity.html</a>
                             <span class="toggle">▶</span>
                         </div>
                     </div>
                     <div class="event-body">
-                        <div class="attrs">Attributes: <code>Investor Name</code>, <code>Amount</code>, <code>Currency</code>, <code>Ledger</code></div>
-                        <div class="payload-preview" id="preview-CAPITAL_INJECTION_EVENT">[CAPITAL INJECTION EVENT]
-- Investor Name: John Doe
-- Amount: 50000
-- Currency: USD
-- Ledger: AGL Treasury</div>
-                        <button class="sandbox-btn" onclick="openSandbox('CAPITAL_INJECTION_EVENT')">Try in Sandbox →</button>
+                        <div class="attrs">Attributes: <code>Email</code>, <code>Public Key</code></div>
+                        <div class="payload-preview" id="preview-REGISTER_IDENTITY_EVENT">[REGISTER IDENTITY EVENT]
+- Email: user@example.com
+- Public Key: -----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A...</div>
+                        <button class="sandbox-btn" onclick="openSandbox('REGISTER_IDENTITY_EVENT')">Try in Sandbox →</button>
                     </div>
                 </div>
 
                 <div class="event-card">
                     <div class="event-header" onclick="toggleCard(this)">
-                        <div class="name"><code>[CURRENCY CONVERSION EVENT]</code> — Multi-currency conversion between ledgers</div>
-                        <div class="meta">
-                            <a class="page-link" href="https://dapp.truesight.me/currency_conversion.html" target="_blank">currency_conversion.html</a>
-                            <span class="toggle">▶</span>
-                        </div>
-                    </div>
-                    <div class="event-body">
-                        <div class="attrs">Attributes: <code>Source Currency</code>, <code>Target Currency</code>, <code>Amount</code>, <code>Ledger</code></div>
-                        <div class="payload-preview" id="preview-CURRENCY_CONVERSION_EVENT">[CURRENCY CONVERSION EVENT]
-- Source Currency: BRL
-- Target Currency: USD
-- Amount: 10000
-- Ledger: AGL Treasury</div>
-                        <button class="sandbox-btn" onclick="openSandbox('CURRENCY_CONVERSION_EVENT')">Try in Sandbox →</button>
-                    </div>
-                </div>
-
-                <div class="event-card">
-                    <div class="event-header" onclick="toggleCard(this)">
-                        <div class="name"><code>[VOTING RIGHTS WITHDRAWAL REQUEST]</code> — Request to cash out voting rights</div>
+                        <div class="name"><code>[VOTING RIGHTS WITHDRAWAL REQUEST]</code> — Request withdrawal of voting rights</div>
                         <div class="meta">
                             <a class="page-link" href="https://dapp.truesight.me/withdraw_voting_rights.html" target="_blank">withdraw_voting_rights.html</a>
                             <span class="toggle">▶</span>
@@ -285,31 +372,135 @@
 - Buyer Name: Acme Corp
 - Product: Ceremonial Cacao
 - Quantity: 50
-- Price: 20.00
+- Price: 25.00
 - Date: 2026-06-13
 - Ledger: AGL Treasury</div>
                         <button class="sandbox-btn" onclick="openSandbox('SALE_EVENT')">Try in Sandbox →</button>
                     </div>
                 </div>
-            </div>
-
-            <div class="event-group">
-                <h3>Identity &amp; Credentials</h3>
 
                 <div class="event-card">
                     <div class="event-header" onclick="toggleCard(this)">
-                        <div class="name"><code>[REGISTER IDENTITY EVENT]</code> — Register a new DAO identity</div>
+                        <div class="name"><code>[TREE PLANTING EVENT]</code> — Record a tree planting</div>
                         <div class="meta">
-                            <a class="page-link" href="https://dapp.truesight.me/register_identity.html" target="_blank">register_identity.html</a>
+                            <a class="page-link" href="https://dapp.truesight.me/report_tree_planting.html" target="_blank">report_tree_planting.html</a>
                             <span class="toggle">▶</span>
                         </div>
                     </div>
                     <div class="event-body">
-                        <div class="attrs">Attributes: <code>Email</code>, <code>Public Key</code></div>
-                        <div class="payload-preview" id="preview-REGISTER_IDENTITY_EVENT">[REGISTER IDENTITY EVENT]
+                        <div class="attrs">Attributes: <code>Farmer Name</code>, <code>Species</code>, <code>Quantity</code>, <code>Date</code>, <code>Location</code></div>
+                        <div class="payload-preview" id="preview-TREE_PLANTING_EVENT">[TREE PLANTING EVENT]
+- Farmer Name: João Santos
+- Species: Cacau (Theobroma cacao)
+- Quantity: 200
+- Date: 2026-06-13
+- Location: Fazenda Boa Vista, Ilhéus, BA</div>
+                        <button class="sandbox-btn" onclick="openSandbox('TREE_PLANTING_EVENT')">Try in Sandbox →</button>
+                    </div>
+                </div>
+
+                <div class="event-card">
+                    <div class="event-header" onclick="toggleCard(this)">
+                        <div class="name"><code>[ASSET RECEIPT]</code> — Record receipt of physical inventory</div>
+                        <div class="meta">
+                            <a class="page-link" href="https://dapp.truesight.me/report_asset_receipt.html" target="_blank">report_asset_receipt.html</a>
+                            <span class="toggle">▶</span>
+                        </div>
+                    </div>
+                    <div class="event-body">
+                        <div class="attrs">Attributes: <code>Manager Name</code>, <code>Inventory Item</code>, <code>Quantity</code>, <code>Location</code>, <code>QR Code(s)</code></div>
+                        <div class="payload-preview" id="preview-ASSET_RECEIPT">[ASSET RECEIPT]
+- Manager Name: Kirsten
+- Inventory Item: Ceremonial Cacao
+- Quantity: 20
+- Location: Main Inventory
+- QR Code(s): 2024OSCAR_20260121_12, 2024OSCAR_20260121_13</div>
+                        <button class="sandbox-btn" onclick="openSandbox('ASSET_RECEIPT')">Try in Sandbox →</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="event-group">
+                <h3>Finance &amp; Treasury</h3>
+
+                <div class="event-card">
+                    <div class="event-header" onclick="toggleCard(this)">
+                        <div class="name"><code>[CAPITAL INJECTION EVENT]</code> — Record a capital injection</div>
+                        <div class="meta">
+                            <a class="page-link" href="https://dapp.truesight.me/report_capital_injection.html" target="_blank">report_capital_injection.html</a>
+                            <span class="toggle">▶</span>
+                        </div>
+                    </div>
+                    <div class="event-body">
+                        <div class="attrs">Attributes: <code>Amount</code>, <code>Currency</code>, <code>Source</code>, <code>Date</code>, <code>Contributor(s)</code></div>
+                        <div class="payload-preview" id="preview-CAPITAL_INJECTION_EVENT">[CAPITAL INJECTION EVENT]
+- Amount: 10000
+- Currency: USD
+- Source: Angel Investor
+- Date: 2026-06-13
+- Contributor(s): Gary Teh</div>
+                        <button class="sandbox-btn" onclick="openSandbox('CAPITAL_INJECTION_EVENT')">Try in Sandbox →</button>
+                    </div>
+                </div>
+
+                <div class="event-card">
+                    <div class="event-header" onclick="toggleCard(this)">
+                        <div class="name"><code>[DAO EXPENSE EVENT]</code> — Record a DAO expense</div>
+                        <div class="meta">
+                            <a class="page-link" href="https://dapp.truesight.me/report_dao_expenses.html" target="_blank">report_dao_expenses.html</a>
+                            <span class="toggle">▶</span>
+                        </div>
+                    </div>
+                    <div class="event-body">
+                        <div class="attrs">Attributes: <code>Type</code>, <code>Amount</code>, <code>Description</code>, <code>Contributor(s)</code></div>
+                        <div class="payload-preview" id="preview-DAO_EXPENSE_EVENT">[DAO EXPENSE EVENT]
+- Type: Marketing
+- Amount: 500
+- Description: Social media ads June 2026
+- Contributor(s): Gary Teh</div>
+                        <button class="sandbox-btn" onclick="openSandbox('DAO_EXPENSE_EVENT')">Try in Sandbox →</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="event-group">
+                <h3>Operations</h3>
+
+                <div class="event-card">
+                    <div class="event-header" onclick="toggleCard(this)">
+                        <div class="name"><code>[AI AGENT CONTRIBUTION]</code> — Record an AI agent's contribution</div>
+                        <div class="meta">
+                            <a class="page-link" href="https://dapp.truesight.me/report_ai_agent_contribution.html" target="_blank">report_ai_agent_contribution.html</a>
+                            <span class="toggle">▶</span>
+                        </div>
+                    </div>
+                    <div class="event-body">
+                        <div class="attrs">Attributes: <code>Agent Name</code>, <code>Task</code>, <code>Result</code>, <code>Contributor(s)</code></div>
+                        <div class="payload-preview" id="preview-AI_AGENT_CONTRIBUTION">[AI AGENT CONTRIBUTION]
+- Agent Name: Sophia Truesight
+- Task: Market research on cacao prices
+- Result: Compiled report with 5 sources
+- Contributor(s): Gary Teh</div>
+                        <button class="sandbox-btn" onclick="openSandbox('AI_AGENT_CONTRIBUTION')">Try in Sandbox →</button>
+                    </div>
+                </div>
+
+                <div class="event-card">
+                    <div class="event-header" onclick="toggleCard(this)">
+                        <div class="name"><code>[DAPP PERMISSION CHANGE EVENT]</code> — Record a DApp permission change</div>
+                        <div class="meta">
+                            <a class="page-link" href="https://dapp.truesight.me/report_dapp_permission_change.html" target="_blank">report_dapp_permission_change.html</a>
+                            <span class="toggle">▶</span>
+                        </div>
+                    </div>
+                    <div class="event-body">
+                        <div class="attrs">Attributes: <code>Email</code>, <code>Permission</code>, <code>Action</code> (grant/revoke), <code>Contributor(s)</code></div>
+                        <div class="payload-preview" id="preview-DAPP_PERMISSION_CHANGE_EVENT">[DAPP PERMISSION CHANGE EVENT]
 - Email: user@example.com
-- Public Key: -----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A...</div>
-                        <button class="sandbox-btn" onclick="openSandbox('REGISTER_IDENTITY_EVENT')">Try in Sandbox →</button>
+- Permission: admin
+- Action: grant
+- Contributor(s): Gary Teh</div>
+                        <button class="sandbox-btn" onclick="openSandbox('DAPP_PERMISSION_CHANGE_EVENT')">Try in Sandbox →</button>
                     </div>
                 </div>
 
@@ -413,45 +604,30 @@
                 return;
             }
             var statusEl = document.getElementById('sandbox-status');
-            var responseEl = document.getElementById('sandbox-response');
-            var responseBody = document.getElementById('sandbox-response-body');
-            statusEl.textContent = '⏳ Sending...';
-            responseEl.style.display = 'none';
-
+            var respEl = document.getElementById('sandbox-response');
+            var bodyEl = document.getElementById('sandbox-response-body');
+            statusEl.textContent = 'Sending...';
+            respEl.style.display = 'none';
             fetch('/dao/test/submit_contribution', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ payload: payload })
+                headers: {'Content-Type': 'text/plain'},
+                body: payload
             })
-            .then(function(r) { return r.json().then(function(data) { return { status: r.status, data: data }; }); })
+            .then(function(r) { return r.text().then(function(t) { return {status: r.status, body: t}; }); })
             .then(function(result) {
-                statusEl.textContent = '✓ Response (' + result.status + ')';
-                responseBody.textContent = JSON.stringify(result.data, null, 2);
-                responseEl.style.display = 'block';
+                statusEl.textContent = result.status + ' (' + result.body.length + ' chars)';
+                bodyEl.textContent = result.body;
+                respEl.style.display = 'block';
             })
             .catch(function(err) {
-                statusEl.textContent = '✗ Error: ' + err.message;
-                responseBody.textContent = err.toString();
-                responseEl.style.display = 'block';
+                statusEl.textContent = 'Error: ' + err.message;
             });
         }
 
-        // Close modal on backdrop click
+        // Close modal on background click
         document.getElementById('sandbox-modal').addEventListener('click', function(e) {
             if (e.target === this) closeSandbox();
         });
-
-        // Fetch the live version (Git commit hash) from /ping and render as a clickable link
-        fetch('/ping')
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
-                var ver = data.version || 'dev';
-                var el = document.getElementById('version-value');
-                el.innerHTML = '<a href="https://github.com/TrueSightDAO/dao_protocol/commit/' + ver + '" target="_blank" rel="noopener" style="color:#2b1d14; text-decoration:underline; text-underline-offset:2px;">' + ver + '</a>';
-            })
-            .catch(function() {
-                document.getElementById('version-value').textContent = 'unavailable';
-            });
     </script>
 </body>
 </html>
