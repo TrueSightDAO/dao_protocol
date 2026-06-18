@@ -311,6 +311,8 @@ def build_event_cli(
     dapp_page: str | None = None,
     validators: dict[str, callable] | None = None,
     normalizers: dict[str, callable] | None = None,
+    defaults: dict[str, str] | None = None,
+    required_labels: list[str] | None = None,
 ):
     """Returns a `main()` entry point that:
       1. Accepts repeated `--attr "Label=Value"` args.
@@ -366,6 +368,13 @@ def build_event_cli(
         )
         args = parser.parse_args(argv)
 
+        # Apply defaults before collecting attrs so missing labels get their default value.
+        _defaults = defaults or {}
+        for lbl in labels:
+            attr_name = f"canon_{lbl}"
+            if getattr(args, attr_name) is None and lbl in _defaults:
+                setattr(args, attr_name, _defaults[lbl])
+
         # Collect in label order: first the canonical labels that got values, then --attr extras.
         attrs: list[tuple[str, str]] = []
         for lbl in labels:
@@ -383,6 +392,12 @@ def build_event_cli(
                 attrs = [(existing_lbl, existing_val) for existing_lbl, existing_val in attrs if existing_lbl != lbl]
             attrs.append((lbl, val))
             seen.add(lbl)
+
+        # Validate required labels after --attr overrides have been applied.
+        _required = required_labels or []
+        missing = [lbl for lbl in _required if lbl not in seen]
+        if missing:
+            parser.error(f"Missing required field(s): {', '.join(missing)}")
 
         if not attrs:
             parser.error("At least one attribute is required (use --attr LABEL=VALUE or a named flag).")
