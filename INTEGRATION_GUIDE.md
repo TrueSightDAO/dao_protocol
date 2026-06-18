@@ -270,7 +270,7 @@ Every event follows the same submission protocol. Below is the complete catalog.
 | `[QR CODE EVENT]` | Scan/register a QR code | QR Code, Action, Location | `scanner.html` |
 | `[QR CODE UPDATE EVENT]` | Update QR code metadata | QR Code, Field, New Value | `update_qr_code.html` |
 | `[BATCH QR CODE REQUEST]` | Request batch QR code generation | Quantity, Prefix, Product | `batch_qr_generator.html` |
-| `[DONATION MINT EVENT]` | Mint a donation pledge QR | Currency, Donor, Amount, Proof URL | Donation flow |
+| `[DONATION MINT EVENT]` | Mint a donation pledge QR | Currency, Donor, Amount, Proof URL | `mint_donation.html` |
 
 ### Governance
 
@@ -278,7 +278,7 @@ Every event follows the same submission protocol. Below is the complete catalog.
 |-----------|---------|---------------|-----------|
 | `[PROPOSAL CREATION]` | Submit a new DAO proposal | Title, Description, Options, Deadline | `create_proposal.html` |
 | `[PROPOSAL VOTE]` | Cast a vote on a proposal | Proposal ID, Vote, Rationale | `review_proposal.html` |
-| `[DAPP PERMISSION CHANGE EVENT]` | Governor-signed permission edits | Action, Target, Permission | Permission UI |
+| `[DAPP PERMISSION CHANGE EVENT]` | Governor-signed permission edits | Action, Target, Permission | `governor_permissions.html` |
 
 ### Credentialing & Identity
 
@@ -286,17 +286,19 @@ Every event follows the same submission protocol. Below is the complete catalog.
 |-----------|---------|---------------|-----------|
 | `[EMAIL REGISTERED EVENT]` | Begin key registration | Email, Generation Source URL | `create_signature.html` |
 | `[EMAIL VERIFICATION EVENT]` | Complete key registration | Verification Key, Email | `create_signature.html` |
-| `[CONTRIBUTOR ADD EVENT]` | Add a new DAO contributor | Name, Email, Role | Onboarding flow |
-| `[CREDENTIALING ATTESTATION EVENT]` | Issue a lineage credential | Program, Attestor, Attestee, Credential Type | `butterfly-effect-club admin panel`, `Credentialing UI` |
-| `[PRACTICE EVENT]` | Log a capoeira training session (Tribo Bahia Mirim) — COPPA-compliant by design: no email or personal identification required, only the practitioner's public key | Program, Practice Type, Practitioner Public Key, Moves Practiced, Total Practice Minutes | `capoeira.agroverse.shop/practice.html` |
+| `[CONTRIBUTOR ADD EVENT]` | Add a new DAO contributor | Name, Email, Initial Digital Signature | `governor_contributor_admin.html` |
+| `[CREDENTIALING ATTESTATION EVENT]` | Issue a lineage credential | Program, Attestation Type, Attestor Public Key, Attestee Public Key, Payload JSON | `butterfly-effect-club.truesight.me` (admin SPA) |
+| `[CREDENTIALING QUALIFICATION EVENT]` | Admission credential for live-cohort students (two-event split: admission → completion) | Program, Attestation Type, Attestor/Attestee keys, Payload JSON | `butterfly-effect-club.truesight.me` (planned — not yet live in JS; defined in `PROPOSAL.md §6.2`) |
+| `[PRACTICE EVENT]` | Log a capoeira training session (Tribo Bahia Mirim) — COPPA-compliant: anonymous keypair, no email required | Program, Practice Type, Practitioner Public Key, Moves Practiced, Total Practice Minutes | `capoeira.agroverse.shop/practice.html` |
 
 ### Outreach & Field Reports
 
 | Event Name | Purpose | Key Attributes | DApp Page |
 |-----------|---------|---------------|-----------|
 | `[RETAIL FIELD REPORT EVENT]` | Log a store visit/check-in | Shop Name, Status, Remarks, Location | `store_interaction_history.html` |
-| `[STORE ADD EVENT]` | Add a new store to the Hit List | Shop Name, Address, Contact, Type | Store add flow |
-| `[PARTNER CHECK-IN EVENT]` | Partner restock check-in | Partner Name, SKU, Quantity, Notes | Partner UI |
+| `[STORE ADD EVENT]` | Add a new store to the Hit List | Shop Name, Address, Contact, Type | Add Store form in `stores_nearby.html` |
+| `[PARTNER CHECK-IN EVENT]` | Partner restock check-in | Partner ID, Contributor Name, Stock Status, Restock SKU, Notes | `partner_check_in.html` |
+| `[PARTNER ADD EVENT]` | Onboard a new retail partner | Partner Name, Email, Address, Type, Governor Name | `partner_add.html` |
 | `[WARMUP SEND EVENT]` | Send a warm-up email draft | Draft ID, Recipient, Campaign | `warmup_review.html` |
 
 ### Other
@@ -307,6 +309,70 @@ Every event follows the same submission protocol. Below is the complete catalog.
 | `[TREE PLANTING EVENT]` | Record a tree planting | Tree Count, Location, Species, Planter | `report_tree_planting.html` |
 | `[FARM REGISTRATION EVENT]` | Register a farm | Farm Name, Location, Owner, Acreage | `register_farm.html` |
 | `[UPC LINKING CONTRIBUTION]` | Link a UPC barcode to a product | Product ID, UPC Code | POS system |
+
+### Non-DApp Client Surfaces
+
+These client applications also submit signed events to Edgar but are hosted on separate domains (not `dapp.truesight.me`).
+
+#### capoeira.agroverse.shop
+
+| Event Name | Purpose | Key Attributes | Page |
+|-----------|---------|---------------|------|
+| `[PRACTICE EVENT]` | Log a capoeira training session — COPPA-compliant: anonymous browser-generated keypair, no personal data collected | Program (`capoeira-tribo-mirim`), Practice Type, Practitioner Public Key, Moves Practiced (JSON), Total Practice Minutes | `practice.html` |
+
+#### butterfly-effect-club.truesight.me
+
+| Event Name | Purpose | Key Attributes | Page |
+|-----------|---------|---------------|------|
+| `[EMAIL REGISTERED EVENT]` | Register admin identity key | Email | `index.html` (sign-in form) |
+| `[EMAIL VERIFICATION EVENT]` | Complete admin key verification | Verification Key, Email | `index.html` (boot redirect) |
+| `[CREDENTIALING ATTESTATION EVENT]` | Issue a program-completion credential | 14 fields: Program, Attestation Type, Attestor/Attestee keys & names, Payload JSON, Roster Source URL/Row, Config/Schema URLs | `index.html` (admin attest button) |
+| `[CREDENTIALING QUALIFICATION EVENT]` | Admission credential for live-cohort students (planned — `PROPOSAL.md §6.2`) | Program, Attestation Type, Attestor/Attestee keys, Payload JSON | `index.html` (not yet live in JS) |
+
+### DApp Page Coverage (complete)
+
+Every page at `dapp.truesight.me` and its relationship to DAO events:
+
+| DApp Page | Event(s) Emitted | Notes |
+|-----------|-----------------|-------|
+| `index.html` | _(none)_ | Read-only landing page / community hub |
+| `chat.html` | _(none)_ | Sophia autopilot chat (AI assistant, not a signed event) |
+| `report_contribution.html` | `[CONTRIBUTION EVENT]` | Time or USD contribution |
+| `report_capital_injection.html` | `[CAPITAL INJECTION EVENT]` | External investment into AGL |
+| `currency_conversion.html` | `[CURRENCY CONVERSION EVENT]` | Multi-currency conversion |
+| `withdraw_voting_rights.html` | `[VOTING RIGHTS WITHDRAWAL REQUEST]` | Cash out voting rights |
+| `report_inventory_movement.html` | `[INVENTORY MOVEMENT]` | Track inventory transfers |
+| `report_sales.html` | `[SALES EVENT]` | QR-coded product sale |
+| `repackaging_planner.html` | `[REPACKAGING BATCH EVENT]` | Bulk repackaging |
+| `report_asset_receipt.html` | `[ASSET RECEIPT EVENT]` | Physical asset receipt |
+| `report_dao_expenses.html` | `[DAO Inventory Expense Event]` | Operational expenses |
+| `scanner.html` | `[QR CODE EVENT]` | Scan/register QR codes |
+| `update_qr_code.html` | `[QR CODE UPDATE EVENT]` | Update QR code metadata |
+| `batch_qr_generator.html` | `[BATCH QR CODE REQUEST]` | Batch QR generation |
+| `create_proposal.html` | `[PROPOSAL CREATION]` | New DAO proposal |
+| `review_proposal.html` | `[PROPOSAL VOTE]` | Vote on proposal |
+| `create_signature.html` | `[EMAIL REGISTERED EVENT]`, `[EMAIL VERIFICATION EVENT]` | Key registration flow |
+| `notarize.html` | `[NOTARIZATION EVENT]` | Document notarization |
+| `report_tree_planting.html` | `[TREE PLANTING EVENT]` | Tree planting log |
+| `register_farm.html` | `[FARM REGISTRATION EVENT]` | Farm registration |
+| `mint_donation.html` | `[DONATION MINT EVENT]` | Mint pledge QR |
+| `governor_permissions.html` | `[DAPP PERMISSION CHANGE EVENT]` | Edit permission matrix |
+| `governor_contributor_admin.html` | `[CONTRIBUTOR ADD EVENT]` | Register new contributor |
+| `partner_add.html` | `[PARTNER ADD EVENT]` | Onboard retail partner |
+| `partner_check_in.html` | `[PARTNER CHECK-IN EVENT]` | Partner restock check-in |
+| `store_interaction_history.html` | `[RETAIL FIELD REPORT EVENT]` | Store visit / status update |
+| `warmup_review.html` | `[WARMUP SEND EVENT]` | Send warm-up email draft |
+| `stores_nearby.html` | _(none)_ — Add Store form emits `[STORE ADD EVENT]` via embedded widget | Read-only map + store add widget |
+| `stores_by_status.html` | _(none)_ | Read-only Hit List browser |
+| `view_inventory_holdings.html` | _(none)_ | Read-only inventory lookup |
+| `verify_request.html` | _(none)_ | Read-only signature verifier |
+| `view_open_proposals.html` | _(none)_ | Read-only proposal browser |
+| `restock_recommender.html` | _(none)_ | Read-only recommender tool |
+| `shipping_planner.html` | _(none)_ | Read-only shipping calculator |
+| `fulfill_subscriptions.html` | _(none)_ — submits batch `[SALES EVENT]` via QR scanning | Subscription fulfillment dashboard |
+| `program_registrations_review.html` | `[PROPOSAL CREATION]` (reviewed registrations submitted as proposals) | Governor-only review |
+| `submit_feedback.html` | _(none)_ — calls GAS directly, not a signed Edgar event | Content feedback form |
+| `tests/fixtures/utils-test.html` | _(none)_ | Test fixture |
 
 ---
 
@@ -411,8 +477,10 @@ Sidekiq worker → POST GAS webhook URL
 | `[DAPP PERMISSION CHANGE EVENT]` | Parse → permissions.json on treasury-cache + audit |
 | `[WARMUP SEND EVENT]` | Parse → GmailApp.send + Warmup Sends audit |
 | `[PARTNER CHECK-IN EVENT]` | Parse → Partner Check-ins on Main Ledger |
+| `[PARTNER ADD EVENT]` | Parse → Agroverse Partners sheet (new row) |
 | `[ASSET RECEIPT EVENT]` | Parse → Currencies + Offchain Transactions |
 | `[CREDENTIALING ATTESTATION EVENT]` | Parse → lineage-credentials commit + program roster back-fill |
+| `[CREDENTIALING QUALIFICATION EVENT]` | Parse → lineage-credentials commit (admission path — planned) |
 | `[PRACTICE EVENT]` | Parse → lineage-credentials commit (capoeira-tribo-mirim program) + CV record |
 
 ### 6.3 Race Condition Prevention
