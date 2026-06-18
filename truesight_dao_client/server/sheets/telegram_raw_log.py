@@ -1,10 +1,10 @@
 """Port of Rails `Gdrive::TelegramRawLog.add_record` — append a signed submission to the
 **Telegram Chat Logs** tab (the DAO ledger intake). Append-only; never raises (returns bool).
 
-Row layout (A:S, matches the Rails model):
+Row layout (A:T, matches the Rails model + Sentinel extension):
   A update_id  B chatroom_id  C chatroom_name  D message_id  E "Edgar"  F ""  G contribution_made
   H "Unknown"  I ""  J "Pending"  K ""  L date(YYYYMMDD)  M "" N "" O ""  P signature_verification
-  Q status_info  R api_response  S governor_authority
+  Q status_info  R api_response  S governor_authority  T is_sentinel
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ def _unique_id() -> str:
 
 def add_record(contribution_made: str, chatroom_id: str = "-1002190388985",
                chatroom_name: str = "Edgar Direct", signature_verification: str | None = None,
-               governor_authority: str = "") -> bool:
+               governor_authority: str = "", is_sentinel: str = "") -> bool:
     try:
         row = [
             _unique_id(),            # A update_id
@@ -52,8 +52,9 @@ def add_record(contribution_made: str, chatroom_id: str = "-1002190388985",
             None,                    # Q status_info
             None,                    # R api_response
             str(governor_authority or ""),  # S
+            str(is_sentinel or ""),  # T
         ]
-        base.append_row(SPREADSHEET_ID, f"{base.quoted_prefix(SHEET)}!A:S", row)
+        base.append_row(SPREADSHEET_ID, f"{base.quoted_prefix(SHEET)}!A:T", row)
         return True
     except Exception:
         return False
