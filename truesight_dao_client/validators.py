@@ -428,3 +428,113 @@ def partner_contributor_name(value: str) -> None:
         msg += f" Did you mean one of: {near}?"
     msg += " Pass --skip-name-check to override (e.g. for a partner you just onboarded that hasn't propagated yet)."
     raise ValueError(msg)
+
+
+# ---------------------------------------------------------------------------
+# Treasury-cache backed validators (fast GitHub raw JSON)
+# ---------------------------------------------------------------------------
+
+_TREASURY_CACHE_JSON_URL = (
+    "https://raw.githubusercontent.com/TrueSightDAO/treasury-cache/main/dao_offchain_treasury.json"
+)
+
+
+@functools.lru_cache(maxsize=1)
+def fetch_treasury_cache() -> dict:
+    """Fetch the treasury cache JSON from GitHub raw.
+
+    Returns the parsed dict on success, empty dict on any failure.
+    Cached for the process lifetime.
+    """
+    try:
+        with urllib.request.urlopen(_TREASURY_CACHE_JSON_URL, timeout=15) as resp:
+            return json.load(resp)
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError):
+        return {}
+
+
+def inventory_item(value: str) -> None:
+    """Reject inventory items not found in the treasury cache.
+
+    Source of truth: treasury-cache/dao_offchain_treasury.json on GitHub.
+    Validates against the `currency` field of each item.
+    """
+    raw = str(value or "").strip()
+    if not raw:
+        raise ValueError("inventory item cannot be empty")
+    cache = fetch_treasury_cache()
+    items = cache.get("items", [])
+    valid = {str(i.get("currency") or "").strip() for i in items}
+    valid.discard("")
+    if not valid:
+        return  # cache unreachable — let the GAS be the strict gate
+    if raw in valid:
+        return
+    raise ValueError(f"{raw!r} is not a known inventory item ({len(valid)} items in cache).")
+
+
+def manager_name(value: str) -> None:
+    """Reject manager names not found in the treasury cache.
+
+    Source of truth: treasury-cache/dao_offchain_treasury.json on GitHub.
+    Validates against the `manager_name` field.
+    """
+    raw = str(value or "").strip()
+    if not raw:
+        raise ValueError("manager name cannot be empty")
+    cache = fetch_treasury_cache()
+    managers = cache.get("managers", [])
+    valid = {str(m.get("manager_name") or "").strip() for m in managers}
+    valid.discard("")
+    if not valid:
+        return  # cache unreachable — let the GAS be the strict gate
+    if raw in valid:
+        return
+    raise ValueError(f"{raw!r} is not a known manager ({len(valid)} managers in cache).")
+
+
+def ledger_name(value: str) -> None:
+    """Reject ledger names not found in the treasury cache.
+
+    Source of truth: treasury-cache/dao_offchain_treasury.json on GitHub.
+    Validates against the `ledger_name` field.
+    """
+    raw = str(value or "").strip()
+    if not raw:
+        raise ValueError("ledger name cannot be empty")
+    cache = fetch_treasury_cache()
+    ledgers = cache.get("ledgers", [])
+    valid = {str(l.get("ledger_name") or "").strip() for l in ledgers}
+    valid.discard("")
+    if not valid:
+        return  # cache unreachable — let the GAS be the strict gate
+    if raw in valid:
+        return
+    raise ValueError(f"{raw!r} is not a known ledger ({len(valid)} ledgers in cache).")
+
+
+# ---------------------------------------------------------------------------
+# QR code validators
+# ---------------------------------------------------------------------------
+
+_QR_CODE_PATTERN = re.compile(
+    r"^\d{4}[A-Z]+_\d{8}_\d+$"
+)
+
+
+def qr_code_format(value: str) -> None:
+    """Reject QR codes that don't match the expected pattern.
+
+    Expected format: YYYYFARM_YYYYMMDD_SEQ (e.g. 2024OSCAR_20260121_32).
+    This is a lightweight format check; existence is verified server-side
+    by the receiving GAS.
+    """
+    raw = str(value or "").strip()
+    if not raw:
+        raise ValueError("QR code cannot be empty")
+    if _QR_CODE_PATTERN.match(raw):
+        return
+    raise ValueError(
+        f"QR code {raw!r} does not match expected format "
+        f"(e.g. 2024OSCAR_20260121_32)."
+    )

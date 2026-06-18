@@ -16,12 +16,15 @@ import sys
 import warnings
 
 from ..edgar_client import build_event_cli
-from ..validators import strip_email_addresses
+from ..validators import qr_code_format, strip_email_addresses
 
 _inner_main = build_event_cli(
     event_name='SALES EVENT',
     canonical_labels=['Item', 'Sales price', 'Sold by', 'Cash proceeds collected by', 'Owner email', 'Stripe Session ID', 'Shipping Provider', 'Tracking number', 'Attached Filename', 'Submission Source'],
     dapp_page='report_sales.html',
+    validators={
+        'Item': qr_code_format,
+    },
     normalizers={
         'Sold by': strip_email_addresses,
         'Cash proceeds collected by': strip_email_addresses,

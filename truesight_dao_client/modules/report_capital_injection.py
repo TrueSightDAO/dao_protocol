@@ -16,6 +16,7 @@ import sys
 from ..edgar_client import build_event_cli
 from ..validators import (
     google_sheets_url,
+    ledger_name,
     normalize_number,
     positive_number,
     required,
@@ -26,7 +27,7 @@ main = build_event_cli(
     canonical_labels=['Ledger', 'Ledger URL', 'Amount', 'Description', 'Attached Filename', 'Destination Capital Injection File Location'],
     dapp_page='report_capital_injection.html',
     validators={
-        'Ledger': required,
+        'Ledger': ledger_name,
         'Ledger URL': google_sheets_url,
         'Amount': positive_number,
         'Description': required,
