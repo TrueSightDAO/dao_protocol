@@ -84,6 +84,43 @@ def _resolve_governor_authority(verification_result: dict | None) -> str:
     return "YES" if _is_governor(name) else "NO"
 
 
+def _resolve_sentinel_auth(verification_result: dict | None) -> str:
+    """Determine column T (is_sentinel) for Telegram Chat Logs.
+
+    Reads 'Is Sentinel' (column W) from Contributors contact information
+    and returns 'TRUE' if the signer's contributor row has it set.
+    Returns '' if verification failed or signer couldn't be resolved.
+    """
+    if not verification_result or not verification_result.get("success"):
+        return ""
+    pk = verification_result.get("public_key", "")
+    if not pk:
+        return ""
+    entry = sigs.find_by_public_key(pk)
+    if not entry:
+        return ""
+    name = entry.get("name", "").strip()
+    if not name:
+        return ""
+    try:
+        contact_prefix = sheets_base.quoted_prefix("Contributors contact information")
+        # Column A (names) and column W (Is Sentinel, index 23)
+        col_a = sheets_base.get_values(
+            _OFFCHAIN_ID, f"{contact_prefix}!A5:A", key_path=sigs._key(),
+        )
+        col_w = sheets_base.get_values(
+            _OFFCHAIN_ID, f"{contact_prefix}!W5:W", key_path=sigs._key(),
+        )
+        for i, row in enumerate(col_a):
+            if row and str(row[0]).strip().lower() == name.lower():
+                if i < len(col_w) and col_w[i] and str(col_w[i][0]).strip().upper() == "TRUE":
+                    return "TRUE"
+                break
+    except Exception:
+        pass
+    return ""
+
+
 def _has_signature_format(text: str) -> bool:
     return ("--------" in text
             and "My Digital Signature:" in text
@@ -146,9 +183,15 @@ async def submit_contribution(request: Request, background: BackgroundTasks) -> 
     governor_authority = _resolve_governor_authority(
         verification_result if signature_verification == "success" else None
     )
+    # Compute sentinel flag for column T (TRUE/blank) — reads Is Sentinel from
+    # Contributors contact information column W.
+    is_sentinel = _resolve_sentinel_auth(
+        verification_result if signature_verification == "success" else None
+    )
     telegram_raw_log.add_record(text or "[No Text Provided]",
                                 signature_verification=signature_verification,
-                                governor_authority=governor_authority)
+                                governor_authority=governor_authority,
+                                is_sentinel=is_sentinel)
 
     # --- attachment → GitHub upload (when text references a github.com blob/tree URL) ---
     file_uploaded = False
