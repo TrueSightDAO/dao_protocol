@@ -80,133 +80,26 @@
                 <div class="endpoint"><span class="method get">GET</span><span class="path">/ping</span><span class="desc">Health check</span></div>
                 <div class="endpoint"><span class="method post">POST</span><span class="path">/dao/submit_contribution</span><span class="desc">Submit a signed contribution event</span></div>
                 <div class="endpoint"><span class="method post">POST</span><span class="path">/dao/test/submit_contribution</span><span class="desc">Sandbox: test payload parsing (no signature)</span></div>
+                <div class="endpoint"><span class="method get">GET</span><span class="path">/dao/transactions</span><span class="desc">Query sales transactions by partner, SKU, date range</span></div>
+                <div class="endpoint"><span class="method get">GET</span><span class="path">/dao/qr-codes</span><span class="desc">Query QR codes by manager, owner, SKU, status</span></div>
+                <div class="endpoint"><span class="method get">GET</span><span class="path">/dao/inventory-movements</span><span class="desc">Query inventory movements by person, role, date range</span></div>
                 <div class="endpoint"><span class="method get">GET</span><span class="path">/proxy/gas/*</span><span class="desc">Proxy to Google Apps Script</span></div>
                 <div class="endpoint"><span class="method get">GET</span><span class="path">/tracking/*</span><span class="desc">Order tracking</span></div>
                 <div class="endpoint"><span class="method post">POST</span><span class="path">/shipping/rates</span><span class="desc">Shipping rate calculation</span></div>
                 <div class="endpoint"><span class="method post">POST</span><span class="path">/stripe/order-sync</span><span class="desc">Stripe order sync</span></div>
-                <div class="endpoint"><span class="method post">POST</span><span class="path">/stripe/subscription</span><span class="desc">Stripe subscription management</span></div>
-                <div class="endpoint"><span class="method post">POST</span><span class="path">/subscription/obligation</span><span class="desc">Subscription obligation check</span></div>
-                <div class="endpoint"><span class="method get">GET</span><span class="path">/qr/check/{code}</span><span class="desc">QR code lookup</span></div>
-                <div class="endpoint"><span class="method get">GET</span><span class="path">/dao/transactions</span><span class="desc">Query sales by partner, SKU, date range</span></div>
-                <div class="endpoint"><span class="method get">GET</span><span class="path">/dao/qr-codes</span><span class="desc">Query QR codes by manager, owner, SKU, status</span></div>
-                <div class="endpoint"><span class="method get">GET</span><span class="path">/dao/inventory-movements</span><span class="desc">Query inventory transfers by person, role, date</span></div>
-            </div>
-        </div>
-
-        <div class="section">
-            <div class="section-title">DAO Query Endpoints</div>
-            <p style="color:#6f5a44; font-size:0.9rem; margin-bottom:1rem;">
-                Read-only query endpoints for looking up DAO records. All name fields support <strong>case-insensitive substring matching</strong>.
-            </p>
-            <div class="event-group">
-                <h3>Transactions</h3>
-                <div class="event-card">
-                    <div class="event-header" onclick="toggleCard(this)">
-                        <div class="name"><code>GET /dao/transactions</code> — Sales records by partner, SKU, or date</div>
-                        <div class="meta"><span class="toggle">▶</span></div>
-                    </div>
-                    <div class="event-body">
-                        <div class="attrs">Parameters: <code>partner</code> (substring), <code>sku</code> (substring), <code>from</code> (YYYYMMDD), <code>to</code> (YYYYMMDD), <code>limit</code> (1–1000)</div>
-                        <div class="payload-preview" id="preview-TRANSACTIONS"># Find all sales to SOHA
-curl "https://edgar.truesight.me/dao/transactions?partner=soha"
-
-# Response:
-{
-  "results": [
-    {
-      "date": "20260115",
-      "partner": "SOHA",
-      "sku": "ceremonial-cacao-fazenda-santa-ana-2023-200g",
-      "qty": 10,
-      "qr_code": "",
-      "value": 0,
-      "status": "",
-      "source_sheet": "QR Code Sales",
-      "source_row": 2
-    }
-  ],
-  "count": 1
-}</div>
-                    </div>
-                </div>
-
-                <h3>QR Codes</h3>
-                <div class="event-card">
-                    <div class="event-header" onclick="toggleCard(this)">
-                        <div class="name"><code>GET /dao/qr-codes</code> — QR codes by manager, owner, SKU, or status</div>
-                        <div class="meta"><span class="toggle">▶</span></div>
-                    </div>
-                    <div class="event-body">
-                        <div class="attrs">Parameters: <code>manager</code> (substring), <code>owner</code> (substring), <code>sku</code> (substring), <code>status</code> (exact: MINTED|SOLD|SAMPLE|GIFT), <code>limit</code> (1–1000)</div>
-                        <div class="payload-preview" id="preview-QR_CODES"># Find all QR codes managed by Kirsten
-curl "https://edgar.truesight.me/dao/qr-codes?manager=kirsten"
-
-# Response:
-{
-  "results": [
-    {
-      "qr_code": "2024OSCAR_20260121_12",
-      "sku": "oscar-bahia-ceremonial-cacao-200g",
-      "status": "MINTED",
-      "manager": "Kirsten",
-      "owner": "",
-      "price": "25",
-      "farm": "Oscar",
-      "year": "2024",
-      "ledger_name": "AGL#25",
-      "source_sheet": "Agroverse QR codes",
-      "source_row": 2
-    }
-  ],
-  "count": 1
-}</div>
-                    </div>
-                </div>
-
-                <h3>Inventory Movements</h3>
-                <div class="event-card">
-                    <div class="event-header" onclick="toggleCard(this)">
-                        <div class="name"><code>GET /dao/inventory-movements</code> — Inventory transfers by person, role, or date</div>
-                        <div class="meta"><span class="toggle">▶</span></div>
-                    </div>
-                    <div class="event-body">
-                        <div class="attrs">Parameters: <code>person</code> (substring), <code>role</code> (sender|recipient), <code>from</code> (YYYYMMDD), <code>to</code> (YYYYMMDD), <code>limit</code> (1–1000)</div>
-                        <div class="payload-preview" id="preview-INVENTORY_MOVEMENTS_QUERY"># Find all inventory movements involving David Campbell as recipient
-curl "https://edgar.truesight.me/dao/inventory-movements?person=campbell&role=recipient"
-
-# Response:
-{
-  "results": [
-    {
-      "date": "20260401",
-      "sender": "Gary",
-      "recipient": "David Campbell",
-      "sku": "ceremonial-cacao-fazenda-santa-ana-2023-200g",
-      "qty": 5,
-      "ledger_name": "AGL#25",
-      "status": "PROCESSED",
-      "source_sheet": "Inventory Movement",
-      "source_row": 4
-    }
-  ],
-  "count": 1
-}</div>
-                    </div>
-                </div>
+                <div class="endpoint"><span class="method get">GET</span><span class="path">/qr-code-check</span><span class="desc">Single QR code lookup</span></div>
+                <div class="endpoint"><span class="method get">GET</span><span class="path">/agroverse/qr-code-check</span><span class="desc">Single QR code lookup (agroverse prefix)</span></div>
+                <div class="endpoint"><span class="method get">GET</span><span class="path">/dao/check_digital_signature</span><span class="desc">Resolve contributor by public key</span></div>
             </div>
         </div>
 
         <div class="section">
             <div class="section-title">DAO Events Reference</div>
-            <p style="color:#6f5a44; font-size:0.9rem; margin-bottom:1rem;">
-                Every DAO action is recorded as a signed <strong>event</strong>. Before submitting an event, check this reference to ensure you're using the correct type and format.
-                Use <code>lookup_event_docs("EVENT NAME")</code> to fetch the docs for a specific event type.
-            </p>
+            <p style="font-size:0.85rem;color:#6f5a44;margin-bottom:1rem;">Use this reference to determine which event type to submit. Each event type has specific required fields and when-to-use rules.</p>
 
             <div class="ref-card">
-                <h4><code>[SALES EVENT]</code> — Record a retail sale</h4>
-                <div class="rule"><strong>When to use:</strong> A bag was sold to an end customer. Money changed hands. The QR code status will be updated to SOLD.</div>
-                <div class="rule"><strong>Not for:</strong> Moving bags between known holders in the supply chain (use <code>[INVENTORY MOVEMENT]</code> instead).</div>
+                <h4><code>SALES EVENT</code></h4>
+                <div class="rule"><strong>When to use:</strong> A bag is sold to an end customer (retail sale). Money changes hands. QR status will be updated to SOLD.</div>
                 <div class="fields"><strong>Required:</strong> <code>Item</code> (QR code), <code>Sales price</code> &nbsp;|&nbsp; <strong>Optional:</strong> <code>Owner email</code>, <code>Stripe Session ID</code>, <code>Shipping Provider</code>, <code>Tracking number</code>, <code>Sold by</code>, <code>Cash proceeds collected by</code></div>
                 <div class="example">[SALES EVENT]
 - Item: 2024OSCAR_20260121_32
@@ -216,128 +109,221 @@ curl "https://edgar.truesight.me/dao/inventory-movements?person=campbell&role=re
             </div>
 
             <div class="ref-card">
-                <h4><code>[INVENTORY MOVEMENT]</code> — Record a transfer between holders</h4>
-                <div class="rule"><strong>When to use:</strong> A bag moves between known holders in the supply chain (e.g. from warehouse to retailer, or retailer to another retailer).</div>
-                <div class="rule"><strong>Not for:</strong> End-customer sales (use <code>[SALES EVENT]</code> instead). If the recipient is a retail customer, it's a sale, not an inventory movement.</div>
+                <h4><code>INVENTORY MOVEMENT</code></h4>
+                <div class="rule"><strong>When to use:</strong> A bag moves between known holders in the supply chain (e.g., from warehouse to retailer, or between facilities). No end-customer sale.</div>
                 <div class="fields"><strong>Required:</strong> <code>Manager Name</code> (sender), <code>Recipient Name</code>, <code>Inventory Item</code> (SKU), <code>QR Code</code>, <code>Quantity</code></div>
                 <div class="example">[INVENTORY MOVEMENT]
 - Manager Name: Kirsten
 - Recipient Name: Gergana - The Way Home Shop
 - Inventory Item: Ceremonial Cacao Kraft Pouch - Oscar 2024
 - QR Code: 2024OSCAR_20260121_32
-- Quantity: 1</div>
+- Quantity: 10</div>
             </div>
 
             <div class="ref-card">
-                <h4><code>[CONTRIBUTION EVENT]</code> — Record a DAO contribution</h4>
-                <div class="rule"><strong>When to use:</strong> A contributor spent time or money on DAO work. Earns TDG tokens.</div>
-                <div class="fields"><strong>Required:</strong> <code>Title</code>, <code>Body</code>, <code>Contributors</code>, <code>Amount</code>, <code>Type</code> (Time/USD) &nbsp;|&nbsp; <strong>Optional:</strong> <code>PR URLs</code>, <code>TDG Issued</code></div>
+                <h4><code>CONTRIBUTION EVENT</code></h4>
+                <div class="rule"><strong>When to use:</strong> A DAO member contributes time, money, or resources. Used for TDG scoring and contribution tracking.</div>
+                <div class="fields"><strong>Required:</strong> <code>Title</code>, <code>Body</code>, <code>Contributors</code> &nbsp;|&nbsp; <strong>Optional:</strong> <code>Amount</code>, <code>Type</code> (Time/USD), <code>TDG Issued</code>, <code>PR URLs</code></div>
                 <div class="example">[CONTRIBUTION EVENT]
-- Title: Built query endpoints for Edgar
-- Body: Added /dao/transactions, /dao/qr-codes, /dao/inventory-movements
-- PR URLs: https://github.com/TrueSightDAO/dao_protocol/pull/116
+- Title: Updated landing page docs
+- Body: Added DAO Events Reference section
 - Contributors: Sophia Truesight
-- Amount: 120
-- Type: Time (Minutes)
-- TDG Issued: 10</div>
+- Amount: 45
+- Type: Time (Minutes)</div>
             </div>
 
             <div class="ref-card">
-                <h4><code>[REGISTER IDENTITY EVENT]</code> — Register a new DAO identity</h4>
-                <div class="rule"><strong>When to use:</strong> A new participant needs a DAO identity with an RSA keypair.</div>
-                <div class="fields"><strong>Required:</strong> <code>Email</code>, <code>Public Key</code></div>
-                <div class="example">[REGISTER IDENTITY EVENT]
-- Email: user@example.com
-- Public Key: -----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A...</div>
+                <h4><code>PURCHASE AGREEMENT</code></h4>
+                <div class="rule"><strong>When to use:</strong> A purchase agreement is signed with a farmer or supplier for future cacao delivery.</div>
+                <div class="fields"><strong>Required:</strong> <code>Farmer Name</code>, <code>Agreement Date</code>, <code>Quantity</code>, <code>Price</code> &nbsp;|&nbsp; <strong>Optional:</strong> <code>Contract ID</code>, <code>Notes</code></div>
+                <div class="example">[PURCHASE AGREEMENT]
+- Farmer Name: Maria Santos
+- Agreement Date: 2026-06-01
+- Quantity: 500
+- Price: 12.00/kg</div>
+            </div>
+
+            <div class="ref-card">
+                <h4><code>QR CODE BATCH</code></h4>
+                <div class="rule"><strong>When to use:</strong> A new batch of QR codes is generated and assigned to a specific SKU and manager.</div>
+                <div class="fields"><strong>Required:</strong> <code>Batch ID</code>, <code>SKU</code>, <code>Quantity</code>, <code>Manager</code> &nbsp;|&nbsp; <strong>Optional:</strong> <code>Notes</code></div>
+                <div class="example">[QR CODE BATCH]
+- Batch ID: 2026Q2-OSCAR
+- SKU: Ceremonial Cacao Kraft Pouch - Oscar 2024
+- Quantity: 50
+- Manager: Kirsten</div>
             </div>
         </div>
 
         <div class="section">
             <div class="section-title">DAO Events</div>
-            <p style="color:#6f5a44; font-size:0.9rem; margin-bottom:1rem;">
-                Every DAO action is recorded as a signed <strong>event</strong>. Below is the complete catalog.
-                Click any event to see its payload format, then <strong>Try in Sandbox</strong> to test it live.
-            </p>
+            <p style="font-size:0.85rem;color:#6f5a44;margin-bottom:1rem;">Expand each event to see the payload format and try it in the sandbox.</p>
 
             <div class="event-group">
-                <h3>Governance &amp; Identity</h3>
+                <h3>📦 Inventory &amp; Sales</h3>
 
                 <div class="event-card">
-                    <div class="event-header" onclick="toggleCard(this)">
-                        <div class="name"><code>[CONTRIBUTION EVENT]</code> — Record a DAO contribution (time or USD)</div>
-                        <div class="meta">
-                            <a class="page-link" href="https://dapp.truesight.me/report_contribution.html" target="_blank">report_contribution.html</a>
-                            <span class="toggle">▶</span>
-                        </div>
+                    <div class="event-header" onclick="toggleBody(this)">
+                        <span class="name"><code>SALES EVENT</code> — Record a retail sale</span>
+                        <span class="meta"><a class="page-link" href="#dao-events-reference">↑ Reference</a><span class="toggle">▶</span></span>
                     </div>
                     <div class="event-body">
-                        <div class="attrs">Attributes: <code>Title</code>, <code>Body</code>, <code>PR URLs</code>, <code>Contributors</code>, <code>Amount</code>, <code>Type</code> (Time/USD), <code>TDG Issued</code></div>
-                        <div class="payload-preview" id="preview-CONTRIBUTION_EVENT">[CONTRIBUTION EVENT]
-- Title: Fixed QR code scanner bug
-- Body: Resolved edge case with batch scanning
-- PR URLs: https://github.com/TrueSightDAO/truesight_autopilot/pull/42
-- Contributors: Sophia Truesight
-- Amount: 120
-- Type: Time (Minutes)
-- TDG Issued: 10</div>
-                        <button class="sandbox-btn" onclick="openSandbox('CONTRIBUTION_EVENT')">Try in Sandbox →</button>
-                    </div>
-                </div>
-
-                <div class="event-card">
-                    <div class="event-header" onclick="toggleCard(this)">
-                        <div class="name"><code>[REGISTER IDENTITY EVENT]</code> — Register a new DAO identity</div>
-                        <div class="meta">
-                            <a class="page-link" href="https://dapp.truesight.me/register_identity.html" target="_blank">register_identity.html</a>
-                            <span class="toggle">▶</span>
-                        </div>
-                    </div>
-                    <div class="event-body">
-                        <div class="attrs">Attributes: <code>Email</code>, <code>Public Key</code></div>
-                        <div class="payload-preview" id="preview-REGISTER_IDENTITY_EVENT">[REGISTER IDENTITY EVENT]
-- Email: user@example.com
-- Public Key: -----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A...</div>
-                        <button class="sandbox-btn" onclick="openSandbox('REGISTER_IDENTITY_EVENT')">Try in Sandbox →</button>
-                    </div>
-                </div>
-
-                <div class="event-card">
-                    <div class="event-header" onclick="toggleCard(this)">
-                        <div class="name"><code>[SALES EVENT]</code> — Record a retail sale</div>
-                        <div class="meta">
-                            <span class="toggle">▶</span>
-                        </div>
-                    </div>
-                    <div class="event-body">
-                        <div class="attrs">Attributes: <code>Item</code> (QR code), <code>Sales price</code>, <code>Owner email</code>, <code>Stripe Session ID</code>, <code>Shipping Provider</code>, <code>Tracking number</code>, <code>Sold by</code>, <code>Cash proceeds collected by</code></div>
-                        <div class="payload-preview" id="preview-SALES_EVENT">[SALES EVENT]
+                        <div class="attrs">Fields: <code>Item</code> (QR code), <code>Sales price</code>, <code>Sold by</code>, <code>Cash proceeds collected by</code></div>
+                        <div class="payload-preview">[SALES EVENT]
 - Item: 2024OSCAR_20260121_32
 - Sales price: 17.50
 - Sold by: Gergana - The Way Home Shop
 - Cash proceeds collected by: Gary Teh</div>
-                        <button class="sandbox-btn" onclick="openSandbox('SALES_EVENT')">Try in Sandbox →</button>
+                        <button class="sandbox-btn" onclick="openSandbox('SALES EVENT', this)">Try in Sandbox</button>
                     </div>
                 </div>
 
                 <div class="event-card">
-                    <div class="event-header" onclick="toggleCard(this)">
-                        <div class="name"><code>[INVENTORY MOVEMENT]</code> — Record a transfer between holders</div>
-                        <div class="meta">
-                            <span class="toggle">▶</span>
-                        </div>
+                    <div class="event-header" onclick="toggleBody(this)">
+                        <span class="name"><code>INVENTORY MOVEMENT</code> — Move bags between holders</span>
+                        <span class="meta"><a class="page-link" href="#dao-events-reference">↑ Reference</a><span class="toggle">▶</span></span>
                     </div>
                     <div class="event-body">
-                        <div class="attrs">Attributes: <code>Manager Name</code> (sender), <code>Recipient Name</code>, <code>Inventory Item</code> (SKU), <code>QR Code</code>, <code>Quantity</code></div>
-                        <div class="payload-preview" id="preview-INVENTORY_MOVEMENT">[INVENTORY MOVEMENT]
+                        <div class="attrs">Fields: <code>Manager Name</code>, <code>Recipient Name</code>, <code>Inventory Item</code>, <code>QR Code</code>, <code>Quantity</code></div>
+                        <div class="payload-preview">[INVENTORY MOVEMENT]
 - Manager Name: Kirsten
 - Recipient Name: Gergana - The Way Home Shop
 - Inventory Item: Ceremonial Cacao Kraft Pouch - Oscar 2024
 - QR Code: 2024OSCAR_20260121_32
-- Quantity: 1</div>
-                        <button class="sandbox-btn" onclick="openSandbox('INVENTORY_MOVEMENT')">Try in Sandbox →</button>
+- Quantity: 10</div>
+                        <button class="sandbox-btn" onclick="openSandbox('INVENTORY MOVEMENT', this)">Try in Sandbox</button>
                     </div>
+                </div>
+            </div>
+
+            <div class="event-group">
+                <h3>🏛️ Governance &amp; Contributions</h3>
+
+                <div class="event-card">
+                    <div class="event-header" onclick="toggleBody(this)">
+                        <span class="name"><code>CONTRIBUTION EVENT</code> — Log a DAO contribution</span>
+                        <span class="meta"><a class="page-link" href="#dao-events-reference">↑ Reference</a><span class="toggle">▶</span></span>
+                    </div>
+                    <div class="event-body">
+                        <div class="attrs">Fields: <code>Title</code>, <code>Body</code>, <code>Contributors</code>, <code>Amount</code>, <code>Type</code></div>
+                        <div class="payload-preview">[CONTRIBUTION EVENT]
+- Title: Updated landing page docs
+- Body: Added DAO Events Reference section
+- Contributors: Sophia Truesight
+- Amount: 45
+- Type: Time (Minutes)</div>
+                        <button class="sandbox-btn" onclick="openSandbox('CONTRIBUTION EVENT', this)">Try in Sandbox</button>
+                    </div>
+                </div>
+
+                <div class="event-card">
+                    <div class="event-header" onclick="toggleBody(this)">
+                        <span class="name"><code>PURCHASE AGREEMENT</code> — Record a farmer agreement</span>
+                        <span class="meta"><a class="page-link" href="#dao-events-reference">↑ Reference</a><span class="toggle">▶</span></span>
+                    </div>
+                    <div class="event-body">
+                        <div class="attrs">Fields: <code>Farmer Name</code>, <code>Agreement Date</code>, <code>Quantity</code>, <code>Price</code></div>
+                        <div class="payload-preview">[PURCHASE AGREEMENT]
+- Farmer Name: Maria Santos
+- Agreement Date: 2026-06-01
+- Quantity: 500
+- Price: 12.00/kg</div>
+                        <button class="sandbox-btn" onclick="openSandbox('PURCHASE AGREEMENT', this)">Try in Sandbox</button>
+                    </div>
+                </div>
+
+                <div class="event-card">
+                    <div class="event-header" onclick="toggleBody(this)">
+                        <span class="name"><code>QR CODE BATCH</code> — Register a new batch</span>
+                        <span class="meta"><a class="page-link" href="#dao-events-reference">↑ Reference</a><span class="toggle">▶</span></span>
+                    </div>
+                    <div class="event-body">
+                        <div class="attrs">Fields: <code>Batch ID</code>, <code>SKU</code>, <code>Quantity</code>, <code>Manager</code></div>
+                        <div class="payload-preview">[QR CODE BATCH]
+- Batch ID: 2026Q2-OSCAR
+- SKU: Ceremonial Cacao Kraft Pouch - Oscar 2024
+- Quantity: 50
+- Manager: Kirsten</div>
+                        <button class="sandbox-btn" onclick="openSandbox('QR CODE BATCH', this)">Try in Sandbox</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">DAO Query Endpoints</div>
+            <p style="font-size:0.85rem;color:#6f5a44;margin-bottom:1rem;">Read-only query endpoints for looking up transactions, QR codes, and inventory movements. All name fields support case-insensitive substring matching.</p>
+
+            <div class="event-card">
+                <div class="event-header" onclick="toggleBody(this)">
+                    <span class="name"><code>GET /dao/transactions</code> — Sales transactions</span>
+                    <span class="meta"><span class="toggle">▶</span></span>
+                </div>
+                <div class="event-body">
+                    <div class="attrs">Parameters: <code>partner</code> (substring), <code>sku</code> (substring), <code>from_date</code>, <code>to_date</code>, <code>limit</code> (default 100, max 1000)</div>
+                    <div class="payload-preview">curl "https://edgar.truesight.me/dao/transactions?partner=soha"
+
+{
+  "results": [
+    {
+      "date": "2026-01-15",
+      "partner": "SOHA",
+      "sku": "Ceremonial Cacao Kraft Pouch - Oscar 2024",
+      "qty": 10,
+      "value": 340.00,
+      "source_sheet": "QR Code Sales"
+    }
+  ],
+  "count": 1
+}</div>
+                </div>
+            </div>
+
+            <div class="event-card">
+                <div class="event-header" onclick="toggleBody(this)">
+                    <span class="name"><code>GET /dao/qr-codes</code> — QR code lookup</span>
+                    <span class="meta"><span class="toggle">▶</span></span>
+                </div>
+                <div class="event-body">
+                    <div class="attrs">Parameters: <code>manager</code> (substring), <code>owner</code> (substring), <code>sku</code> (substring), <code>status</code> (exact), <code>limit</code></div>
+                    <div class="payload-preview">curl "https://edgar.truesight.me/dao/qr-codes?manager=the+way+home"
+
+{
+  "results": [
+    {
+      "qr_code": "2024OSCAR_20260121_32",
+      "sku": "Ceremonial Cacao Kraft Pouch - Oscar 2024",
+      "status": "ON CONSIGNMENT",
+      "manager": "Gergana - The Way Home Shop",
+      "ledger": "AGL4"
+    }
+  ],
+  "count": 10
+}</div>
+                </div>
+            </div>
+
+            <div class="event-card">
+                <div class="event-header" onclick="toggleBody(this)">
+                    <span class="name"><code>GET /dao/inventory-movements</code> — Track through hands</span>
+                    <span class="meta"><span class="toggle">▶</span></span>
+                </div>
+                <div class="event-body">
+                    <div class="attrs">Parameters: <code>person</code> (substring), <code>role</code> (sender/recipient), <code>from_date</code>, <code>to_date</code>, <code>limit</code></div>
+                    <div class="payload-preview">curl "https://edgar.truesight.me/dao/inventory-movements?person=soha"
+
+{
+  "results": [
+    {
+      "date": "2026-01-15",
+      "qr_code": "2024OSCAR_20260121_32",
+      "sender": "Kirsten",
+      "recipient": "SOHA",
+      "note": "Restock"
+    }
+  ],
+  "count": 21
+}</div>
                 </div>
             </div>
         </div>
@@ -346,40 +332,45 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A...</div>
             <div class="section-title">Ecosystem</div>
             <div class="ecosystem-links">
                 <a href="https://truesight.me" target="_blank">TrueSight DAO</a>
-                <a href="https://dapp.truesight.me" target="_blank">DApp</a>
                 <a href="https://agroverse.shop" target="_blank">Agroverse Shop</a>
+                <a href="https://oracle.truesight.me" target="_blank">Oracle</a>
                 <a href="https://github.com/TrueSightDAO" target="_blank">GitHub</a>
             </div>
         </div>
 
         <footer>
-            <p>EDGAR DAO Protocol — TrueSight DAO</p>
-            <p class="tagline">From the canopy to the cup, every bean accounted for.</p>
+            <p>EDGAR — Event-Driven Governance, Accounting &amp; Reporting</p>
+            <p class="tagline">TrueSight DAO — 10,000 hectares of Amazon rainforest</p>
         </footer>
     </div>
 
-    <script>
-        // Fetch version from /ping
-        fetch('/ping')
-            .then(r => r.json())
-            .then(d => { document.getElementById('version-value').textContent = d.version || '—'; })
-            .catch(() => { document.getElementById('version-value').textContent = '—'; });
+    <div id="sandbox-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
+        <div style="background:#fff9f0;border-radius:12px;padding:1.5rem;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;">
+            <h3 style="margin-bottom:0.75rem;color:#2b1d14;">Sandbox: <span id="sandbox-event-name"></span></h3>
+            <textarea id="sandbox-payload" style="width:100%;min-height:120px;background:#2b1d14;color:#c8e6c9;border:none;border-radius:6px;padding:0.6rem 0.8rem;font-family:'SF Mono','Consolas',monospace;font-size:0.78rem;line-height:1.5;white-space:pre-wrap;resize:vertical;"></textarea>
+            <div style="margin-top:0.75rem;display:flex;gap:0.5rem;justify-content:flex-end;">
+                <button onclick="closeSandbox()" style="background:none;border:1px solid rgba(95,111,82,0.2);padding:0.4rem 1rem;border-radius:6px;cursor:pointer;color:#6f5a44;">Cancel</button>
+                <button onclick="submitSandbox()" style="background:#5f6f52;color:#fff;border:none;padding:0.4rem 1rem;border-radius:6px;cursor:pointer;">Submit to Sandbox</button>
+            </div>
+            <div id="sandbox-result" style="margin-top:0.75rem;display:none;"></div>
+        </div>
+    </div>
 
-        function toggleCard(header) {
-            const body = header.nextElementSibling;
-            const toggle = header.querySelector('.toggle');
-            if (body && body.classList.contains('event-body')) {
-                body.classList.toggle('open');
-                toggle.classList.toggle('open');
-            }
+    <script>
+        function toggleBody(el) {
+            const body = el.parentElement.querySelector('.event-body');
+            const toggle = el.querySelector('.toggle');
+            body.classList.toggle('open');
+            toggle.classList.toggle('open');
         }
 
-        function openSandbox(eventType) {
-            const preview = document.getElementById('preview-' + eventType);
-            if (!preview) return;
-            const payload = preview.textContent.trim();
-            document.getElementById('sandbox-payload').value = payload;
+        function openSandbox(eventName, btn) {
+            const card = btn.closest('.event-card');
+            const preview = card.querySelector('.payload-preview');
+            document.getElementById('sandbox-event-name').textContent = eventName;
+            document.getElementById('sandbox-payload').value = preview.textContent.trim();
             document.getElementById('sandbox-modal').style.display = 'flex';
+            document.getElementById('sandbox-result').style.display = 'none';
         }
 
         function closeSandbox() {
@@ -388,37 +379,33 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A...</div>
 
         function submitSandbox() {
             const payload = document.getElementById('sandbox-payload').value;
-            const resultEl = document.getElementById('sandbox-result');
-            resultEl.textContent = 'Sending...';
+            const resultDiv = document.getElementById('sandbox-result');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<p style="color:#6f5a44;">Submitting...</p>';
+
             fetch('/dao/test/submit_contribution', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: 'text=' + encodeURIComponent(payload)
             })
             .then(r => r.json())
-            .then(d => { resultEl.textContent = JSON.stringify(d, null, 2); })
-            .catch(e => { resultEl.textContent = 'Error: ' + e.message; });
+            .then(data => {
+                resultDiv.innerHTML = '<pre style="background:#2b1d14;color:#c8e6c9;padding:0.5rem 0.7rem;border-radius:6px;font-size:0.75rem;">' + JSON.stringify(data, null, 2) + '</pre>';
+            })
+            .catch(err => {
+                resultDiv.innerHTML = '<p style="color:#c0392b;">Error: ' + err.message + '</p>';
+            });
         }
 
-        // Close modal on outside click
-        document.addEventListener('click', function(e) {
-            const modal = document.getElementById('sandbox-modal');
-            if (e.target === modal) closeSandbox();
+        // Close modal on background click
+        document.getElementById('sandbox-modal').addEventListener('click', function(e) {
+            if (e.target === this) closeSandbox();
         });
-    </script>
 
-    <!-- Sandbox Modal -->
-    <div id="sandbox-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
-        <div style="background:#fff9f0; border-radius:12px; padding:1.5rem; max-width:600px; width:90%; max-height:80vh; overflow-y:auto;">
-            <h3 style="margin-bottom:0.75rem; color:#2b1d14;">Sandbox — Test Event Submission</h3>
-            <p style="font-size:0.8rem; color:#6f5a44; margin-bottom:0.75rem;">Edit the payload below and submit to test parsing (no signature required).</p>
-            <textarea id="sandbox-payload" style="width:100%; min-height:150px; background:#2b1d14; color:#c8e6c9; border:none; border-radius:6px; padding:0.6rem; font-family:'SF Mono','Consolas',monospace; font-size:0.75rem; line-height:1.5; resize:vertical;"></textarea>
-            <div style="display:flex; gap:0.5rem; margin-top:0.75rem;">
-                <button onclick="submitSandbox()" style="background:#5f6f52; color:#fff; border:none; padding:0.4rem 1rem; border-radius:6px; cursor:pointer; font-size:0.85rem;">Submit</button>
-                <button onclick="closeSandbox()" style="background:transparent; color:#6f5a44; border:1px solid rgba(95,111,82,0.2); padding:0.4rem 1rem; border-radius:6px; cursor:pointer; font-size:0.85rem;">Cancel</button>
-            </div>
-            <pre id="sandbox-result" style="margin-top:0.75rem; background:#2b1d14; color:#c8e6c9; padding:0.6rem; border-radius:6px; font-size:0.75rem; white-space:pre-wrap; max-height:200px; overflow-y:auto;">Result will appear here...</pre>
-        </div>
-    </div>
+        // Fetch version on load
+        fetch('/ping').then(r => r.json()).then(d => {
+            document.getElementById('version-value').textContent = d.version || '—';
+        }).catch(() => {});
+    </script>
 </body>
 </html>
