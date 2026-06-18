@@ -211,8 +211,14 @@ def _gas_json_ok(resp) -> bool:
 # retry backoff specifically to ride out GAS cold starts / transient 5xx; mirror that here
 # so a single transient failure doesn't leave dao_members.json stale until the daily 03:00
 # cron. Waits sit between attempts → 3 attempts total (immediate, +2s, +6s).
+#
+# Timeout is 60s (not 30s) because the GAS cold-start path reads 3 large sheets,
+# calls assetVerify (another GAS), builds JSON, and commits to GitHub — easily
+# 30-50s when the script container is cold. The daily cron at 03:00 UTC is the
+# safety net, but we want webhook-triggered refreshes to succeed for same-day
+# accuracy.
 _CACHE_REFRESH_BACKOFFS_S = (2, 6)
-_CACHE_REFRESH_TIMEOUT_S = 30
+_CACHE_REFRESH_TIMEOUT_S = 60
 
 
 def _trigger_dao_members_cache_refresh() -> dict:
