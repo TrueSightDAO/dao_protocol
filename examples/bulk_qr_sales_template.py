@@ -13,9 +13,12 @@ Prerequisites:
 
 Workflow:
   1. Discover QR codes via GAS endpoint (?list_with_members=true)
-  2. One [SALES EVENT] per QR code (Item = QR code ID)
-  3. Optional: [INVENTORY MOVEMENT] to deplete offchain asset location
-  4. Optional: [QR CODE UPDATE EVENT] if GAS does not auto-flip status
+  2. One [SALES EVENT] per QR code (Item = QR code ID) — SUFFICIENT on its own;
+     downstream (QR Code Sales tab -> offchain transactions -> treasury cache)
+     depletes inventory AUTOMATICALLY. Do NOT add an [INVENTORY MOVEMENT] to
+     "deplete": that event only transfers inventory custody person-to-person,
+     it is not a depletion step and is not part of the sales flow.
+  3. Optional: [QR CODE UPDATE EVENT] if GAS does not auto-flip status
 
 See also:
   - agentic_ai_context/notes/claude_serialized_qr_sales_2026-04-29.md (full playbook)
@@ -131,13 +134,20 @@ def submit_sales_events(qr_codes):
 
 
 # ---------------------------------------------------------------------------
-# STEP 3 (optional): [INVENTORY MOVEMENT] to deplete offchain location
+# OPTIONAL custody transfer — [INVENTORY MOVEMENT]
+# NOT a sales/depletion step. A sale needs ONLY the [SALES EVENT] above
+# (downstream auto-depletes). Use this ONLY when you actually need to reassign
+# physical custody of the items from one person to another.
 # ---------------------------------------------------------------------------
 
 
 def submit_inventory_movement(qr_codes, inventory_item, destination):
     """
-    Deplete the offchain asset location after sales.
+    Transfer inventory custody from one person to another (NOT a depletion).
+
+    A sale does not require this — the [SALES EVENT] alone is sufficient and
+    inventory depletion happens automatically downstream. Use this only to
+    reassign who physically holds the items.
 
     Parameters:
       qr_codes     : list of QR code IDs sold
