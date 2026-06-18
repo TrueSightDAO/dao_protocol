@@ -5,21 +5,23 @@ Browser equivalent: dapp.truesight.me/report_sales.html
 
 Run from the dao_client repo root:
     python -m truesight_dao_client.modules.report_sales --help
+
+Note on name fields:
+  "Sold by" and "Cash proceeds collected by" in the DApp are populated from
+  the Agroverse QR codes sheet (Column U = Manager Name). The CLI does not
+  yet validate against that live list; the operator is responsible for using
+  the canonical manager name.
 """
 import sys
 import warnings
 
 from ..edgar_client import build_event_cli
-from ..validators import dao_contributor_name, strip_email_addresses
+from ..validators import strip_email_addresses
 
 _inner_main = build_event_cli(
     event_name='SALES EVENT',
     canonical_labels=['Item', 'Sales price', 'Sold by', 'Cash proceeds collected by', 'Owner email', 'Stripe Session ID', 'Shipping Provider', 'Tracking number', 'Attached Filename', 'Submission Source'],
     dapp_page='report_sales.html',
-    validators={
-        'Sold by': dao_contributor_name,
-        'Cash proceeds collected by': dao_contributor_name,
-    },
     normalizers={
         'Sold by': strip_email_addresses,
         'Cash proceeds collected by': strip_email_addresses,
