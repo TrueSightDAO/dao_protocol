@@ -21,7 +21,7 @@ from fastapi.responses import FileResponse
 
 from .. import __version__
 from .config import Settings, get_settings
-from .routes import dao, health, proxy, qr_code_check, query, shipping, stripe_order_sync, stripe_subscription, subscription_obligation, tracking
+from .routes import dao, events_catalog, health, proxy, qr_code_check, query, shipping, stripe_order_sync, stripe_subscription, subscription_obligation, tracking
 
 
 def _configure_bugsnag(settings: Settings) -> bool:
@@ -74,6 +74,7 @@ def create_app() -> FastAPI:
     async def root():
         return FileResponse(str(index_html))
 
+    app.include_router(events_catalog.router, tags=["events_catalog"])
     app.include_router(health.router, tags=["health"])
     app.include_router(proxy.router, tags=["proxy"])
     app.include_router(tracking.router, tags=["tracking"])
