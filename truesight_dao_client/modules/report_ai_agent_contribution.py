@@ -38,15 +38,17 @@ PR_PATTERN = re.compile(
 
 def _contributors_from_email(email: str) -> str:
     """Derive default contributor name from EMAIL or CONTRIBUTOR_NAME env var.
-    
+
     Prefers CONTRIBUTOR_NAME if set. Otherwise derives from EMAIL local-part.
+    Returns name ONLY (no email address) so Grok scoring splits contributors
+    correctly and the ledger stays clean.
     """
     name = (os.getenv("CONTRIBUTOR_NAME") or "").strip()
     if name:
         return name
     email = (email or "").strip()
     if "@" in email:
-        return email.split("@", 1)[0].replace(".", " ").title() + f" <{email}>"
+        return email.split("@", 1)[0].replace(".", " ").title()
     return email or "AI Agent"
 
 

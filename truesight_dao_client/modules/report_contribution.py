@@ -10,6 +10,7 @@ Run:
 import sys
 
 from ..edgar_client import build_event_cli
+from ..validators import dao_contributor_name, strip_email_addresses
 
 # Canonical rubric types from the TrueSight DAO Intiatives Scoring Rubric.
 # See Main Ledger & Contributors spreadsheet, tab "Intiatives Scoring Rubric".
@@ -53,8 +54,13 @@ main = build_event_cli(
     event_name='CONTRIBUTION EVENT',
     canonical_labels=['Type', 'Amount', 'Description', 'Contributor(s)', 'TDG Issued', 'Attached Filename', 'Destination Contribution File Location'],
     dapp_page='report_contribution.html',
-    validators={'Type': _validate_contribution_type},
-    normalizers={'Contributor(s)': _normalize_contributors},
+    validators={
+        'Type': _validate_contribution_type,
+        'Contributor(s)': dao_contributor_name,
+    },
+    normalizers={
+        'Contributor(s)': lambda v: strip_email_addresses(_normalize_contributors(v)),
+    },
 )
 
 if __name__ == "__main__":

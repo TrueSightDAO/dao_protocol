@@ -240,6 +240,24 @@ def strip(value: str) -> str:
     return str(value or "").strip()
 
 
+_EMAIL_IN_ANGLE_BRACKETS = re.compile(r"\s*<[^>]+>\s*")
+
+
+def strip_email_addresses(value: str) -> str:
+    """Remove email addresses in angle brackets from contributor strings.
+
+    "Kimi Moon <admin+kimi@truesight.me>, Gary Teh" → "Kimi Moon, Gary Teh"
+    Also strips dangling commas left behind after removal.
+    """
+    raw = str(value or "").strip()
+    if not raw:
+        return raw
+    cleaned = _EMAIL_IN_ANGLE_BRACKETS.sub("", raw)
+    # Remove any empty segments left behind (e.g. "Name , Other" → "Name, Other")
+    parts = [p.strip() for p in cleaned.split(",") if p.strip()]
+    return ", ".join(parts)
+
+
 # ---------------------------------------------------------------------------
 # API-backed validators (live allow-lists from deployed GAS endpoints)
 # ---------------------------------------------------------------------------
@@ -286,6 +304,95 @@ def fetch_partner_contributors() -> tuple[str, ...]:
         if name and name not in seen:
             seen[name] = None
     return tuple(seen)
+
+
+# GitHub-raw snapshot of all DAO members (schema v3).
+# Published by tokenomics/google_app_scripts/tdg_identity_management/dao_members_cache_publisher.gs.
+_DAO_MEMBERS_JSON_URL = (
+    "https://raw.githubusercontent.com/TrueSightDAO/treasury-cache/main/dao_members.json"
+)
+
+
+@functools.lru_cache(maxsize=1)
+def fetch_dao_members() -> tuple[str, ...]:
+    """Fetch the canonical DAO member name allow-list from the GitHub cache.
+
+    Returns a tuple of distinct contributor display names exactly as they
+    appear in dao_members.json (column A of Contributors contact information).
+    Cached for the process lifetime.
+
+    Returns an empty tuple on any network / parse failure so the calling
+    validator can degrade to "allow" (the GAS scanner is the strict gate).
+    """
+    try:
+        with urllib.request.urlopen(_DAO_MEMBERS_JSON_URL, timeout=15) as resp:
+            payload = json.load(resp)
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError):
+        return ()
+    contributors = payload.get("contributors", [])
+    seen: dict[str, None] = {}
+    for c in contributors:
+        name = str(c.get("name") or "").strip()
+        if name and name not in seen:
+            seen[name] = None
+    return tuple(seen)
+
+
+def dao_contributor_name(value: str) -> None:
+    """Reject Contributor Name values not found in the DAO members cache.
+
+    Source of truth: treasury-cache/dao_members.json on GitHub (published
+    by the dao_members_cache_publisher GAS). Catches typos and LLM
+    hallucinations that would silently break downstream joins.
+
+    Strips email addresses in angle brackets before checking so inputs
+    like "Kimi Moon <admin+kimi@truesight.me>" are validated as "Kimi Moon".
+
+    Degrades to "allow" if the cache is unreachable so a network blip or a
+    newly-registered contributor doesn't block legitimate submissions.
+    The receiving GAS scanner still enforces correctness server-side.
+    """
+    raw = str(value or "").strip()
+    if not raw:
+        raise ValueError("contributor name cannot be empty")
+
+    # Strip email addresses in angle brackets before validating.
+    cleaned = _EMAIL_IN_ANGLE_BRACKETS.sub("", raw)
+
+    # Multi-contributor strings are comma-separated; validate each part.
+    names = [n.strip() for n in cleaned.split(",") if n.strip()]
+    if not names:
+        raise ValueError("contributor name cannot be empty")
+
+    valid = fetch_dao_members()
+    if not valid:
+        return  # cache unreachable — let the GAS be the strict gate
+
+    # Check each name against the roster.
+    invalid: list[str] = []
+    for name in names:
+        if name not in valid:
+            invalid.append(name)
+
+    if not invalid:
+        return
+
+    # Helpful suggestions for typos.
+    def _canon(s: str) -> str:
+        return re.sub(r"[^a-z0-9]+", "", s.lower())
+
+    msgs: list[str] = []
+    for name in invalid:
+        canon = _canon(name)
+        near = [n for n in valid if _canon(n) == canon][:5]
+        if not near:
+            near = [n for n in valid if canon and (canon in _canon(n) or _canon(n) in canon)][:5]
+        msg = f"{name!r} is not a known DAO contributor ({len(valid)} names in cache)."
+        if near:
+            msg += f" Did you mean one of: {near}?"
+        msgs.append(msg)
+
+    raise ValueError(" ".join(msgs))
 
 
 def partner_contributor_name(value: str) -> None:
