@@ -207,12 +207,18 @@ curl "https://edgar.truesight.me/dao/inventory-movements?person=campbell&role=re
                 <h4><code>[SALES EVENT]</code> — Record a retail sale</h4>
                 <div class="rule"><strong>When to use:</strong> A bag was sold to an end customer. Money changed hands. The QR code status will be updated to SOLD.</div>
                 <div class="rule"><strong>Not for:</strong> Moving bags between known holders in the supply chain (use <code>[INVENTORY MOVEMENT]</code> instead).</div>
-                <div class="fields"><strong>Required:</strong> <code>Item</code> (QR code), <code>Sales price</code> &nbsp;|&nbsp; <strong>Optional:</strong> <code>Owner email</code>, <code>Stripe Session ID</code>, <code>Shipping Provider</code>, <code>Tracking number</code>, <code>Sold by</code>, <code>Cash proceeds collected by</code></div>
+                <div class="fields"><strong>Required:</strong> <code>Item</code> (QR code), <code>Sales price</code>, <code>Owner email</code> &nbsp;|&nbsp; <strong>Optional:</strong> <code>Sold by</code>, <code>Cash proceeds collected by</code>, <code>Stripe Session ID</code>, <code>Shipping Provider</code>, <code>Tracking number</code>, <code>Attached Filename</code>, <code>Submission Source</code></div>
                 <div class="example">[SALES EVENT]
 - Item: 2024OSCAR_20260121_32
 - Sales price: 17.50
 - Sold by: Gergana - The Way Home Shop
-- Cash proceeds collected by: Gary Teh</div>
+- Cash proceeds collected by: Gary Teh
+- Owner email: info@thewayhomeshop.com
+- Stripe Session ID: (none)
+- Shipping Provider: (none)
+- Tracking number: (none)
+- Attached Filename: None
+- Submission Source: https://dapp.truesight.me/report_sales.html</div>
             </div>
 
             <div class="ref-card">
@@ -311,12 +317,18 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A...</div>
                         </div>
                     </div>
                     <div class="event-body">
-                        <div class="attrs">Attributes: <code>Item</code> (QR code), <code>Sales price</code>, <code>Owner email</code>, <code>Stripe Session ID</code>, <code>Shipping Provider</code>, <code>Tracking number</code>, <code>Sold by</code>, <code>Cash proceeds collected by</code></div>
+                        <div class="attrs">Attributes: <code>Item</code> (QR code), <code>Sales price</code>, <code>Sold by</code>, <code>Cash proceeds collected by</code>, <code>Owner email</code> (required), <code>Stripe Session ID</code>, <code>Shipping Provider</code>, <code>Tracking number</code>, <code>Attached Filename</code>, <code>Submission Source</code></div>
                         <div class="payload-preview" id="preview-SALES_EVENT">[SALES EVENT]
 - Item: 2024OSCAR_20260121_32
 - Sales price: 17.50
 - Sold by: Gergana - The Way Home Shop
-- Cash proceeds collected by: Gary Teh</div>
+- Cash proceeds collected by: Gary Teh
+- Owner email: info@thewayhomeshop.com
+- Stripe Session ID: (none)
+- Shipping Provider: (none)
+- Tracking number: (none)
+- Attached Filename: None
+- Submission Source: https://dapp.truesight.me/report_sales.html</div>
                         <button class="sandbox-btn" onclick="openSandbox('SALES_EVENT')">Try in Sandbox →</button>
                     </div>
                 </div>
