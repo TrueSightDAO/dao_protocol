@@ -106,6 +106,10 @@ class Settings(BaseSettings):
     # GitHub PAT for /dao attachment uploads to TrueSightDAO repos (DAO_PROTOCOL_GITHUB_PAT).
     github_pat: str = ""
 
+    # GitHub repo for the review-queue cache files (DAO_PROTOCOL_GITHUB_REVIEW_QUEUE_REPO).
+    # Defaults to treasury-cache in the TrueSightDAO org.
+    github_review_queue_repo: str = "TrueSightDAO/treasury-cache"
+
     # Agroverse inventory-snapshot GAS (ASSET RECEIPT dispatch → refresh inventory JSON). GET
     # ?action=&token=. From DAO_PROTOCOL_AGROVERSE_INVENTORY_{GAS_WEBAPP_URL,PUBLISH_SECRET,GAS_ACTION}.
     agroverse_inventory_gas_webapp_url: str = ""
