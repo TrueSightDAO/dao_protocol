@@ -10,8 +10,15 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Query
+import asyncio
+import json
+import logging
+from datetime import datetime, timezone
 
+import httpx
+from fastapi import APIRouter, HTTPException, Query
+
+from ..config import get_settings
 from ..sheets import inventory_movements, qr_codes, transactions
 
 router = APIRouter(prefix="/dao", tags=["dao_query"])
