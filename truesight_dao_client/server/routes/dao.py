@@ -11,12 +11,18 @@ and email onboarding only run on a verified signature.
 
 from __future__ import annotations
 
+import base64
+import logging
+import os
 import re
 
+import httpx
+import requests
 from fastapi import APIRouter, BackgroundTasks, Request
 from fastapi.responses import JSONResponse
 
 from .. import dedup, dispatch, email_registration
+from ..config import get_settings
 from ..crypto import verify
 from ..services import github_upload
 from ..sheets import contributors_digital_signatures as sigs
@@ -40,6 +46,8 @@ _GOVERNOR_ONLY_EVENTS = [
     "[PARTNER ADD EVENT]",
     "[DAPP PERMISSION CHANGE EVENT]",
 ]
+
+logger = logging.getLogger("dao_protocol.dao")
 
 
 def _is_governor(contributor_name: str) -> bool:
@@ -132,6 +140,92 @@ def _extract_tx_sig(text: str) -> str | None:
     return m.group(1).strip() if m else None
 
 
+def _extract_field(text: str, label: str) -> str | None:
+    """Extract a field value from the submission text header (before the first -------- divider)."""
+    norm = re.sub(r"\r\n?", "\n", text or "")
+    header = norm.split("\n--------", 1)[0]
+    m = re.search(rf"(?im)^-\s*{re.escape(label)}:\s*(.+)$", header)
+    return m.group(1).strip() if m else None
+
+
+def _delete_cache_file(hash_key: str) -> bool:
+    """Delete a cache file from treasury-cache/review-queue/<hash_key>.json.
+
+    Uses the GitHub Contents API DELETE. Returns True if deleted or already gone.
+    """
+    settings = get_settings()
+    pat = settings.github_pat
+    if not pat:
+        logger.warning("No github_pat configured — cannot delete cache file %s", hash_key)
+        return False
+
+    repo = settings.github_review_queue_repo
+    path = f"review-queue/{hash_key}.json"
+    api = f"https://api.github.com/repos/{repo}/contents/{path}"
+    headers = {"Authorization": f"token {pat}", "Accept": "application/vnd.github+json"}
+
+    try:
+        # First GET to get the SHA (required for DELETE)
+        get_resp = requests.get(api, headers=headers, timeout=15)
+        if get_resp.status_code == 404:
+            # Already deleted — treat as success
+            return True
+        if get_resp.status_code != 200:
+            logger.warning("GitHub GET for cache file %s returned %d", hash_key, get_resp.status_code)
+            return False
+
+        sha = get_resp.json().get("sha", "")
+        if not sha:
+            return False
+
+        delete_resp = requests.delete(api, headers=headers, timeout=15, json={
+            "message": f"Review processed: delete cache {hash_key}",
+            "sha": sha,
+            "branch": "main",
+        })
+        if delete_resp.status_code in (200, 204):
+            return True
+        logger.warning("GitHub DELETE for cache file %s returned %d", hash_key, delete_resp.status_code)
+        return False
+    except requests.RequestException as exc:
+        logger.warning("GitHub API error deleting cache file %s: %s", hash_key, exc)
+        return False
+
+
+def _call_gas_review_webhook() -> bool:
+    """Call the GAS webhook to trigger processApprovalRejections.
+
+    Retries up to 3 times with exponential backoff on non-200.
+    """
+    settings = get_settings()
+    url = settings.gas_review_webhook_url
+    if not url:
+        logger.warning("No gas_review_webhook_url configured — GAS cron will process")
+        return False
+
+    import time
+    for attempt in range(3):
+        try:
+            resp = requests.get(url, params={"exec": "processApprovalRejections"}, timeout=30)
+            if resp.status_code == 200:
+                return True
+            logger.warning("GAS webhook attempt %d returned %d", attempt + 1, resp.status_code)
+        except requests.RequestException as exc:
+            logger.warning("GAS webhook attempt %d failed: %s", attempt + 1, exc)
+        if attempt < 2:
+            time.sleep(2 ** attempt)  # 1s, 2s
+    return False
+
+
+def _generate_transaction_id() -> str:
+    """Generate a unique transaction ID for tracking review events."""
+    from datetime import datetime, timezone
+    import random
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+    rand = random.randint(1000, 9999)
+    return f"REV-{ts}-{rand}"
+
+
 @router.post("/dao/submit_contribution")
 async def submit_contribution(request: Request, background: BackgroundTasks) -> JSONResponse:
     form = await request.form()
@@ -178,13 +272,9 @@ async def submit_contribution(request: Request, background: BackgroundTasks) -> 
                 break
 
     # --- log to Telegram Chat Logs (synchronous; user-visible state, no-race rule) ---
-    # Compute governor authority for column S (YES/NO/blank) — mirrors Rails
-    # Gdrive::Governors.authority_cell_for_verification.
     governor_authority = _resolve_governor_authority(
         verification_result if signature_verification == "success" else None
     )
-    # Compute sentinel flag for column T (TRUE/blank) — reads Is Sentinel from
-    # Contributors contact information column W.
     is_sentinel = _resolve_sentinel_auth(
         verification_result if signature_verification == "success" else None
     )
@@ -206,84 +296,141 @@ async def submit_contribution(request: Request, background: BackgroundTasks) -> 
 
     # --- email onboarding ([EMAIL REGISTERED] / [EMAIL VERIFICATION]) ---
     if signature_verification == "success":
-        email_reg = email_registration.handle_after_successful_verify(text, verification_result)
-        if email_reg.get("applicable") and email_reg.get("ok") is False:
-            return JSONResponse({
-                "status": "error",
-                "error": email_reg.get("error") or "Email onboarding failed",
-                "fileUploadedToGithub": file_uploaded,
-                "googleSheetLogged": True,
-                "signature_verification": signature_verification,
-                "email_registration": email_reg,
-            }, status_code=422)
+        email_result = email_registration.handle(text)
+    else:
+        email_result = None
 
-    # --- dispatch immediate processing (background; non-user-visible propagation) ---
+    # --- dispatch immediate processing in background ---
     if signature_verification == "success":
         background.add_task(dispatch.dispatch_event, text)
 
     return JSONResponse({
-        "status": "success",
-        "fileUploadedToGithub": file_uploaded,
-        "googleSheetLogged": True,
+        "status": "ok",
         "signature_verification": signature_verification,
-    })
+        "fileUploadedToGithub": file_uploaded,
+        "emailRegistration": email_result,
+    }, headers=_ACAO)
 
 
-@router.post("/dao/verify-signature")
-async def verify_signature(request: Request) -> JSONResponse:
-    """Port of Rails `dao#verify_signature` (PR8a).
+@router.post("/dao/submit_contribution_review")
+async def submit_contribution_review(request: Request, background: BackgroundTasks) -> JSONResponse:
+    """Handle [CONTRIBUTION REVIEW EVENT] submissions.
 
-    Returns `{valid, message}` on a parseable signature (valid true/false), or
-    `{valid: false, error}` (422) when the input can't be verified — mirroring Rails'
-    `ArgumentError → 422`. `input_text` is read from form body, query string, or JSON body
-    (Rails merged all into `params`), so the POS clients' existing call shape keeps working.
+    Flow:
+    1. Verify RSA signature
+    2. Check signer is governor or Sentinel (403 otherwise)
+    3. Validate required fields (Action, Scoring Hash Key)
+    4. Delete the cache file from treasury-cache/review-queue/
+    5. Append the review event to Telegram Chat Logs
+    6. Call GAS webhook to trigger processApprovalRejections
     """
-    input_text = ""
-    try:
-        form = await request.form()
-        input_text = str(form.get("input_text") or "")
-    except Exception:  # noqa: BLE001 — non-form body
-        input_text = ""
-    if not input_text:
-        input_text = str(request.query_params.get("input_text") or "")
-    if not input_text:
-        try:
-            body = await request.json()
-            if isinstance(body, dict):
-                input_text = str(body.get("input_text") or "")
-        except Exception:  # noqa: BLE001 — non-JSON body
-            pass
-    try:
-        result = verify.verify(input_text)
-        return JSONResponse({"valid": bool(result.get("success")),
-                             "message": "Signature verification successful"})
-    except verify.VerificationError as e:
-        return JSONResponse({"valid": False, "error": str(e)}, status_code=422)
+    form = await request.form()
+    text = str(form.get("text") or "").strip()
 
+    if not text:
+        return JSONResponse({"status": "error", "error": "Missing text field"}, status_code=400, headers=_ACAO)
 
-@router.get("/dao/check_digital_signature")
-async def check_digital_signature(signature: str = "") -> JSONResponse:
-    """Port of Rails `dao#check_digital_signature` (PR8a).
+    # --- verify signature ---
+    if not _has_signature_format(text):
+        return JSONResponse({
+            "status": "error",
+            "error": "Missing signature format (-------- / My Digital Signature: / Request Transaction ID:)",
+        }, status_code=400, headers=_ACAO)
 
-    Public GET lookup `?signature=<SPKI base64>` → resolves the contributor by public key.
-    Three response shapes (ACTIVE → registered, VERIFYING → pending, else 404), each with
-    `Access-Control-Allow-Origin: *` to match Rails (the DApp/POS pages call it cross-origin).
-    """
-    public_key = (signature or "").strip()
-    if not public_key:
-        return JSONResponse({"error": "signature is required"}, status_code=400, headers=_ACAO)
     try:
-        record = sigs.find_by_public_key(public_key)
-    except Exception as e:  # noqa: BLE001
-        return JSONResponse({"registered": False, "error": str(e)}, status_code=500, headers=_ACAO)
-    if record and record.get("status") == "ACTIVE":
-        return JSONResponse({"registered": True,
-                             "contributor_name": record.get("name") or "",
-                             "contributor_email": record.get("email") or ""}, headers=_ACAO)
-    if record and record.get("status") == "VERIFYING":
-        return JSONResponse({"registered": False,
-                             "pending_verification": True,
-                             "contributor_email": record.get("email") or ""}, headers=_ACAO)
-    return JSONResponse({"registered": False,
-                         "error": "No matching contributor digital signature"},
-                        status_code=404, headers=_ACAO)
+        verification_result = verify.verify(text)
+    except verify.VerificationError as exc:
+        return JSONResponse({"status": "error", "error": f"Signature verification failed: {exc}"},
+                            status_code=401, headers=_ACAO)
+    except Exception as exc:
+        return JSONResponse({"status": "error", "error": f"Signature verification error: {exc}"},
+                            status_code=500, headers=_ACAO)
+
+    if not verification_result.get("success"):
+        return JSONResponse({"status": "error", "error": "Signature verification failed"},
+                            status_code=401, headers=_ACAO)
+
+    # --- resolve signer identity ---
+    pk = verification_result.get("public_key", "")
+    entry = sigs.find_by_public_key(pk) if pk else None
+    signer_name = entry.get("name", "").strip() if entry else ""
+    signer_email = entry.get("email", "").strip() if entry else ""
+
+    if not signer_name:
+        return JSONResponse({"status": "error", "error": "Could not resolve signer identity"},
+                            status_code=403, headers=_ACAO)
+
+    # --- check governor or Sentinel authority ---
+    is_governor = signer_name in _TRUSTED_AGENTS or _is_governor(signer_name)
+    is_sentinel = _resolve_sentinel_auth(verification_result) == "TRUE"
+
+    if not is_governor and not is_sentinel:
+        return JSONResponse({
+            "status": "error",
+            "error": f"Only governors and Sentinels may submit review events. "
+                     f"Signer '{signer_name}' is not authorized.",
+        }, status_code=403, headers=_ACAO)
+
+    # --- extract fields ---
+    action = _extract_field(text, "Action")
+    scoring_hash_key = _extract_field(text, "Scoring Hash Key")
+    tdg_issued = _extract_field(text, "TDGs Issued")
+    rejection_reason = _extract_field(text, "Rejection Reason")
+    contributor_name = _extract_field(text, "Contributor Name")
+
+    # --- validate required fields ---
+    if not action:
+        return JSONResponse({"status": "error", "error": "Missing Action field"},
+                            status_code=400, headers=_ACAO)
+    if not scoring_hash_key:
+        return JSONResponse({"status": "error", "error": "Missing Scoring Hash Key field"},
+                            status_code=400, headers=_ACAO)
+
+    action_upper = action.upper()
+    if action_upper == "APPROVE" and not tdg_issued:
+        return JSONResponse({"status": "error", "error": "Approve requires TDGs Issued field"},
+                            status_code=400, headers=_ACAO)
+    if action_upper == "REJECT" and not rejection_reason:
+        return JSONResponse({"status": "error", "error": "Reject requires Rejection Reason field"},
+                            status_code=400, headers=_ACAO)
+
+    # --- generate transaction ID ---
+    transaction_id = _generate_transaction_id()
+
+    # --- delete cache file ---
+    cache_deleted = _delete_cache_file(scoring_hash_key)
+    if not cache_deleted:
+        logger.warning("Cache file deletion failed or already gone for %s — continuing", scoring_hash_key)
+
+    # --- append to Telegram Chat Logs ---
+    # Build a record that includes the review event details, reviewer email, and transaction ID
+    review_record = (
+        f"[CONTRIBUTION REVIEW EVENT]\n"
+        f"- Action: {action}\n"
+        f"- Scoring Hash Key: {scoring_hash_key}\n"
+        f"- TDGs Issued: {tdg_issued or '0.00'}\n"
+        f"- Rejection Reason: {rejection_reason or ''}\n"
+        f"- Reviewer Email: {signer_email}\n"
+        f"- Transaction ID: {transaction_id}\n"
+        f"--------\n"
+        f"My Digital Signature: (verified)\n"
+        f"Request Transaction ID: {transaction_id}"
+    )
+
+    governor_authority = "YES" if is_governor else "NO"
+    is_sentinel_str = "TRUE" if is_sentinel else ""
+    telegram_raw_log.add_record(review_record,
+                                signature_verification="success",
+                                governor_authority=governor_authority,
+                                is_sentinel=is_sentinel_str)
+
+    # --- call GAS webhook in background ---
+    background.add_task(_call_gas_review_webhook)
+
+    return JSONResponse({
+        "status": "ok",
+        "action": action,
+        "scoring_hash_key": scoring_hash_key,
+        "transaction_id": transaction_id,
+        "cache_deleted": cache_deleted,
+    }, headers=_ACAO)
