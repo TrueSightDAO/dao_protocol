@@ -49,6 +49,7 @@ truesight-dao-cache-freight = "truesight_dao_client.cache.freight:main"
 truesight-dao-cache-treasury = "truesight_dao_client.cache.treasury:main"
 truesight-dao-cache-compositions = "truesight_dao_client.cache.compositions:main"
 truesight-dao-cache-contributors = "truesight_dao_client.cache.contributors:main"
+truesight-dao-e2e-subscription-webhook = "truesight_dao_client.tests.test_e2e_subscription_webhook:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
