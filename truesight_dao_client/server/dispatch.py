@@ -63,6 +63,8 @@ ROUTING: list = [
     # `Program Registrations` tab; a governor approves in step 2 before provisioning.
     # Spec: agentic_ai_context/PROGRAM_PARTNER_ONBOARDING.md.
     ("[PROGRAM REGISTRATION REQUEST]", [("PROGRAM_REGISTRATION_PROCESSING", "processProgramRegistrationsFromTelegramChatLogs")], False),
+    # Review events — processed by the GAS processApprovalRejections webhook
+    ("[CONTRIBUTION REVIEW EVENT]", [("REVIEW_PROCESSING", "processApprovalRejections")], False),
 ]
 
 
