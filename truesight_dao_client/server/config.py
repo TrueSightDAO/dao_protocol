@@ -110,6 +110,10 @@ class Settings(BaseSettings):
     # Defaults to treasury-cache in the TrueSightDAO org.
     github_review_queue_repo: str = "TrueSightDAO/treasury-cache"
 
+    # GAS webhook URL for review processing (DAO_PROTOCOL_GAS_REVIEW_WEBHOOK_URL).
+    # Edgar calls GET <url>?exec=processApprovalRejections after a review event.
+    gas_review_webhook_url: str = ""
+
     # Agroverse inventory-snapshot GAS (ASSET RECEIPT dispatch → refresh inventory JSON). GET
     # ?action=&token=. From DAO_PROTOCOL_AGROVERSE_INVENTORY_{GAS_WEBAPP_URL,PUBLISH_SECRET,GAS_ACTION}.
     agroverse_inventory_gas_webapp_url: str = ""
