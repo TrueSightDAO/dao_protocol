@@ -34,6 +34,7 @@ truesight-dao-report-ai-agent-contribution = "truesight_dao_client.modules.repor
 truesight-dao-report-dapp-permission-change = "truesight_dao_client.modules.report_dapp_permission_change:main"
 truesight-dao-report-capital-injection = "truesight_dao_client.modules.report_capital_injection:main"
 truesight-dao-report-contribution = "truesight_dao_client.modules.report_contribution:main"
+truesight-dao-report-contribution-review = "truesight_dao_client.report_contribution_review:main"
 truesight-dao-add-contributor = "truesight_dao_client.modules.add_contributor:main"
 truesight-dao-add-partner = "truesight_dao_client.modules.add_partner:main"
 truesight-dao-report-asset-receipt = "truesight_dao_client.modules.report_asset_receipt:main"
