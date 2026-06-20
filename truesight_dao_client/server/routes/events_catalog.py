@@ -4,7 +4,7 @@ GET /events-catalog  → serve the canonical events catalog
 GET /events-catalog/healthz → health check (catalog loadable)
 
 Used by Sophia autopilot and other clients that need live event definitions.
-Served via nginx at edgar.truesight.me/dao-protocol/events-catalog
+Served at edgar.truesight.me/events-catalog
 """
 
 from __future__ import annotations

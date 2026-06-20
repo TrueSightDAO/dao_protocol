@@ -296,7 +296,7 @@ async def submit_contribution(request: Request, background: BackgroundTasks) -> 
 
     # --- email onboarding ([EMAIL REGISTERED] / [EMAIL VERIFICATION]) ---
     if signature_verification == "success":
-        email_result = email_registration.handle(text)
+        email_result = email_registration.handle_after_successful_verify(text, verification_result)
     else:
         email_result = None
 
