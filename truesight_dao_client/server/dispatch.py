@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Event dispatch — port of Rails `dao_controller#trigger_immediate_processing`.
 
 After a verified submission is logged, fire the GAS webhook(s) for its event type (immediate
@@ -65,6 +66,8 @@ ROUTING: list = [
     ("[PROGRAM REGISTRATION REQUEST]", [("PROGRAM_REGISTRATION_PROCESSING", "processProgramRegistrationsFromTelegramChatLogs")], False),
     # Review events — processed by the GAS processApprovalRejections webhook
     ("[CONTRIBUTION REVIEW EVENT]", [("REVIEW_PROCESSING", "processApprovalRejections")], False),
+    # Currency definition — defines a QR-ready serializable currency in the Currencies tab
+    ("[CURRENCY DEFINITION EVENT]", [("CURRENCY_DEFINITION", "processCurrencyDefinitionsFromTelegramChatLogs")], False),
 ]
 
 
