@@ -149,47 +149,65 @@ def _extract_field(text: str, label: str) -> str | None:
     return m.group(1).strip() if m else None
 
 
-def _delete_cache_file(hash_key: str) -> bool:
-    """Delete a cache file from treasury-cache/review-queue/<hash_key>.json.
+def _safe_hash(hash_key: str) -> str:
+    """Filesystem-safe form of a Scoring Hash Key — must match generate_review_cache.py."""
+    return hash_key.replace("/", "_").replace("+", "-").replace("=", "")
 
-    Uses the GitHub Contents API DELETE. Returns True if deleted or already gone.
+
+def _delete_cache_file(hash_key: str) -> bool:
+    """Delete the review-queue cache file(s) for a Scoring Hash Key.
+
+    Cache files are named ``<safe_hash>__<sheet_row>.json`` (see generate_review_cache.py):
+    the raw hash isn't filesystem-safe and isn't unique per row (splits share a hash). So we
+    list ``review-queue/`` and delete every file whose name starts with ``<safe_hash>__`` (plus
+    the legacy ``<hash_key>.json`` name, if any). A still-pending split sibling is re-created on
+    the next generator run. Returns True if all matches were deleted or none existed.
     """
     settings = get_settings()
     pat = settings.github_pat
     if not pat:
-        logger.warning("No github_pat configured — cannot delete cache file %s", hash_key)
+        logger.warning("No github_pat configured — cannot delete cache file for %s", hash_key)
         return False
 
     repo = settings.github_review_queue_repo
-    path = f"review-queue/{hash_key}.json"
-    api = f"https://api.github.com/repos/{repo}/contents/{path}"
     headers = {"Authorization": f"token {pat}", "Accept": "application/vnd.github+json"}
+    list_api = f"https://api.github.com/repos/{repo}/contents/review-queue"
+    prefix = f"{_safe_hash(hash_key)}__"
+    legacy = f"{hash_key}.json"
 
     try:
-        # First GET to get the SHA (required for DELETE)
-        get_resp = requests.get(api, headers=headers, timeout=15)
-        if get_resp.status_code == 404:
-            # Already deleted — treat as success
-            return True
-        if get_resp.status_code != 200:
-            logger.warning("GitHub GET for cache file %s returned %d", hash_key, get_resp.status_code)
+        list_resp = requests.get(list_api, headers=headers, timeout=20)
+        if list_resp.status_code == 404:
+            return True  # directory gone — nothing to delete
+        if list_resp.status_code != 200:
+            logger.warning("GitHub list review-queue returned %d", list_resp.status_code)
             return False
 
-        sha = get_resp.json().get("sha", "")
-        if not sha:
-            return False
+        entries = list_resp.json()
+        targets = [
+            e for e in entries
+            if isinstance(e, dict) and (e.get("name", "").startswith(prefix) or e.get("name", "") == legacy)
+        ]
+        if not targets:
+            return True  # already processed / never cached
 
-        delete_resp = requests.delete(api, headers=headers, timeout=15, json={
-            "message": f"Review processed: delete cache {hash_key}",
-            "sha": sha,
-            "branch": "main",
-        })
-        if delete_resp.status_code in (200, 204):
-            return True
-        logger.warning("GitHub DELETE for cache file %s returned %d", hash_key, delete_resp.status_code)
-        return False
+        all_ok = True
+        for e in targets:
+            del_resp = requests.delete(
+                f"https://api.github.com/repos/{repo}/contents/{e['path']}",
+                headers=headers, timeout=15,
+                json={
+                    "message": f"Review processed: delete cache {e['name']}",
+                    "sha": e["sha"],
+                    "branch": "main",
+                },
+            )
+            if del_resp.status_code not in (200, 204):
+                logger.warning("GitHub DELETE %s returned %d", e["name"], del_resp.status_code)
+                all_ok = False
+        return all_ok
     except requests.RequestException as exc:
-        logger.warning("GitHub API error deleting cache file %s: %s", hash_key, exc)
+        logger.warning("GitHub API error deleting cache for %s: %s", hash_key, exc)
         return False
 
 
