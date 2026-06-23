@@ -22,6 +22,7 @@ from fastapi import APIRouter, BackgroundTasks, Request
 from fastapi.responses import JSONResponse
 
 from .. import dedup, dispatch, email_registration
+from ... import validators
 from ..config import get_settings
 from ..crypto import verify
 from ..services import github_upload
@@ -393,6 +394,23 @@ async def submit_contribution_review(request: Request, background: BackgroundTas
     if action_upper == "REJECT" and not rejection_reason:
         return JSONResponse({"status": "error", "error": "Reject requires Rejection Reason field"},
                             status_code=400, headers=_ACAO)
+
+    # --- validate the reviewed contributor at the trust boundary ---
+    # On Approve the Contributor Name is written to Scored Chatlogs Col A and decides who
+    # receives the TDG. Block unknown / hallucinated / typo'd names here so a hallucinating
+    # LLM, Sophia, or any client POSTing directly cannot inject a false contributor. The
+    # validator checks against the DAO members roster (Contributors contact information Col A)
+    # and only degrades to "allow" if that cache is unreachable — the GAS write-back's
+    # (hash+contributor) match and the transfer script's contributor validation remain the
+    # downstream backstop.
+    if action_upper == "APPROVE" and contributor_name:
+        try:
+            validators.dao_contributor_name(contributor_name)
+        except ValueError as exc:
+            return JSONResponse({
+                "status": "error",
+                "error": f"Unknown contributor for review approval: {exc}",
+            }, status_code=422, headers=_ACAO)
 
     # --- generate transaction ID ---
     transaction_id = _generate_transaction_id()
