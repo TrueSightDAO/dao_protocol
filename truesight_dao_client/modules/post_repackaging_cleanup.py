@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Submit [POST-REPACKAGING CLEANUP EVENT] to Edgar.
+"""Submit [REPACKAGING SETTLEMENT EVENT] to Edgar.
 
 Populates offchain asset location + Currencies metadata after a repackaging
 batch has been processed by the repackaging-currency-ingest GAS.
 
-DApp equivalent: dapp.truesight.me/post_repackaging_cleanup.html
+DApp equivalent: dapp.truesight.me/repackaging_settlement.html
 
 Run from the dao_client repo root:
     python -m truesight_dao_client.modules.post_repackaging_cleanup --help
@@ -15,7 +15,7 @@ from ..edgar_client import build_event_cli
 from ..validators import required, url_or_empty
 
 main = build_event_cli(
-    event_name='POST-REPACKAGING CLEANUP EVENT',
+    event_name='REPACKAGING SETTLEMENT EVENT',
     canonical_labels=[
         'Composition URL',
         'Holder Name',
@@ -44,9 +44,9 @@ main = build_event_cli(
         'Add Output Locations': 'true',
         'Set Currencies Metadata': 'true',
         'Rebuild Inventory': 'false',
-        'Submission Source': 'Post-Repackaging Cleanup CLI',
+        'Submission Source': 'Repackaging Settlement CLI',
     },
-    dapp_page='post_repackaging_cleanup.html',
+    dapp_page='repackaging_settlement.html',
 )
 
 if __name__ == "__main__":
