@@ -51,6 +51,13 @@
       "required_fields": ["Input SKU", "Output SKU", "Quantity"],
       "dapp_page": "repackaging_planner.html"
     },
+    "POST-REPACKAGING CLEANUP EVENT": {
+      "category": "Inventory & Supply Chain",
+      "description": "Populate offchain asset location + Currencies metadata after a repackaging batch",
+      "canonical_labels": ["Composition URL", "Holder Name", "Farm Name", "State", "Country", "Year", "Landing Page", "Ledger URL", "SKU Mapping", "Deplete Inputs", "Add Output Locations", "Set Currencies Metadata", "Rebuild Inventory", "Submission Source"],
+      "required_fields": ["Composition URL", "Holder Name"],
+      "dapp_page": "post_repackaging_cleanup.html"
+    },
     "ASSET RECEIPT EVENT": {
       "category": "Inventory & Supply Chain",
       "description": "Record receipt of a physical DAO asset",

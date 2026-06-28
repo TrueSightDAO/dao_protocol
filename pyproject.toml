@@ -30,6 +30,7 @@ truesight-dao-define-currency = "truesight_dao_client.modules.define_currency:ma
 truesight-dao-create-proposal = "truesight_dao_client.modules.create_proposal:main"
 truesight-dao-notarize = "truesight_dao_client.modules.notarize:main"
 truesight-dao-register-farm = "truesight_dao_client.modules.register_farm:main"
+truesight-dao-post-repackaging-cleanup = "truesight_dao_client.modules.post_repackaging_cleanup:main"
 truesight-dao-repackaging-planner = "truesight_dao_client.modules.repackaging_planner:main"
 truesight-dao-report-ai-agent-contribution = "truesight_dao_client.modules.report_ai_agent_contribution:main"
 truesight-dao-report-dapp-permission-change = "truesight_dao_client.modules.report_dapp_permission_change:main"
