@@ -59,6 +59,9 @@ ROUTING: list = [
     ], False),
     ("[CREDENTIALING ATTESTATION EVENT]", [("CREDENTIALING_ATTESTATION", "process_attestation_events")], False),
     ("[PARTNER CHECK-IN EVENT]", [("PARTNER_CHECK_IN_PROCESSING", "processPartnerCheckInsFromTelegramChatLogs")], False),
+    ("[POST-REPACKAGING CLEANUP EVENT]", [
+        ("POST_REPACKAGING_CLEANUP", "processPostRepackagingCleanup"),
+    ], True),  # enqueue inventory snapshot (writes to offchain asset location)
     ("[ASSET RECEIPT EVENT]", [("ASSET_RECEIPT_PROCESSING", "processAssetReceiptsFromTelegramChatLogs")], True),
     # Self-serve program onboarding (step 1). Scanner appends a PENDING row to the
     # `Program Registrations` tab; a governor approves in step 2 before provisioning.
