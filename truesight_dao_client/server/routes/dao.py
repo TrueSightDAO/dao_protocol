@@ -48,6 +48,11 @@ _GOVERNOR_ONLY_EVENTS = [
     "[DAPP PERMISSION CHANGE EVENT]",
 ]
 
+# Target Ledger values accepted for [DAO Inventory Expense Event]. Shipping,
+# supplies, and operational expenses are drawn from the offchain USD balance on
+# the main ledger. Managed ledgers that track their own expenses can be added here.
+_VALID_EXPENSE_LEDGERS = {"offchain"}
+
 logger = logging.getLogger("dao_protocol.dao")
 
 
@@ -277,6 +282,17 @@ async def submit_contribution(request: Request, background: BackgroundTasks) -> 
                               f"To re-submit, delete the row from the QR Code Sales sheet first."},
                     status_code=409,
                 )
+
+    # --- Target Ledger validation for DAO Inventory Expense Event ---
+    if signature_verification == "success" and "[DAO Inventory Expense Event]" in text:
+        ledger = (_extract_field(text, "Target Ledger") or "").strip()
+        if ledger not in _VALID_EXPENSE_LEDGERS:
+            return JSONResponse(
+                {"status": "error",
+                 "error": f"Invalid Target Ledger '{ledger or '(empty)'}' for expense. "
+                          f"Shipping and operational expenses must use Target Ledger: offchain."},
+                status_code=422,
+            )
 
     # --- governor enforcement for restricted events ---
     if signature_verification == "success":
