@@ -68,8 +68,8 @@
     "DAO Inventory Expense Event": {
       "category": "Inventory & Supply Chain",
       "description": "Record DAO operational expenses",
-      "canonical_labels": ["Item", "Cost", "Category", "Receipt", "DAO Member Name", "Target Ledger", "Inventory Type", "Inventory Quantity", "Description", "Attached Filename", "Destination Inventory File Location"],
-      "required_fields": ["Item", "Cost"],
+      "canonical_labels": ["DAO Member Name", "Target Ledger", "Latitude", "Longitude", "Inventory Type", "Inventory Quantity", "Description", "Attached Filename", "Destination Expense File Location", "Submission Source"],
+      "required_fields": ["Inventory Type", "Inventory Quantity", "DAO Member Name"],
       "dapp_page": "report_dao_expenses.html"
     },
     "QR CODE EVENT": {
