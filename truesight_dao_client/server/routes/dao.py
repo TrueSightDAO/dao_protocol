@@ -1,6 +1,6 @@
 """`POST /dao/submit_contribution` — port of Rails `dao_controller#submit_contribution` (PR5b/PR5c).
 
-Flow: verify signature → (on success) dedup by Request-Transaction-ID →
+Flow: verify signature → (on success) QR dedup for SALES EVENT (sheet-based, reversible) →
 resolve governor authority (column S: YES/NO/blank) → record to **Telegram Chat
 Logs** (synchronous, no-race) → attachment→GitHub upload → `[EMAIL REGISTERED/VERIFICATION]`
 onboarding (422 on failure) → dispatch immediate processing in the background → respond.
@@ -21,7 +21,7 @@ import requests
 from fastapi import APIRouter, BackgroundTasks, Request
 from fastapi.responses import JSONResponse
 
-from .. import dedup, dispatch, email_registration
+from .. import dispatch, email_registration
 from ... import validators
 from ..config import get_settings
 from ..crypto import verify
@@ -265,17 +265,21 @@ async def submit_contribution(request: Request, background: BackgroundTasks) -> 
     else:
         signature_verification = "no_signature_format"
 
-    # --- dedup (only meaningful on a verified signature) ---
-    if signature_verification == "success":
-        tx_sig = _extract_tx_sig(text)
-        if tx_sig and dedup.is_duplicate(tx_sig):
-            return JSONResponse(
-                {"status": "error",
-                 "error": "Duplicate submission (Request Transaction ID already processed)."},
-                status_code=409,
-            )
+    # --- QR dedup for SALES EVENT (sheet-based, reversible) ---
+    if signature_verification == "success" and "[SALES EVENT]" in text:
+        qr = _extract_field(text, "QR Code")
+        if qr:
+            from ..sheets import qr_code_sales
+            if qr_code_sales.already_recorded(qr):
+                return JSONResponse(
+                    {"status": "error",
+                     "error": f"QR code {qr} already has a sales record in QR Code Sales. "
+                              f"To re-submit, delete the row from the QR Code Sales sheet first."},
+                    status_code=409,
+                )
 
-        # --- governor enforcement for restricted events ---
+    # --- governor enforcement for restricted events ---
+    if signature_verification == "success":
         for gov_event in _GOVERNOR_ONLY_EVENTS:
             if gov_event in text:
                 pk = verification_result.get("public_key", "") if verification_result else ""
