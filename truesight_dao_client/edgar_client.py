@@ -431,12 +431,26 @@ def build_event_cli(
                 generated_name = next(v for lbl, v in normalized_attrs if lbl == _ATTACHED_FILENAME_LABEL)
             else:
                 generated_name = _generate_attachment_filename(event_name, client.email, original_filename)
-                normalized_attrs.append((_ATTACHED_FILENAME_LABEL, generated_name))
+                # Insert Attached Filename at canonical position (before Destination / Submission Source)
+                insert_at = len(normalized_attrs)
+                for i, (lbl, _) in enumerate(normalized_attrs):
+                    if lbl in ("Destination Expense File Location", "Destination Contribution File Location",
+                               "Destination Inventory File Location", "Destination Currency Conversion File Location",
+                               "Submission Source"):
+                        insert_at = i
+                        break
+                normalized_attrs.insert(insert_at, (_ATTACHED_FILENAME_LABEL, generated_name))
                 seen_labels.add(_ATTACHED_FILENAME_LABEL)
 
             destination_label = _find_destination_label(labels)
             if destination_label and destination_label not in seen_labels:
-                normalized_attrs.append((destination_label, ATTACHMENT_REPO_BASE_URL + generated_name))
+                # Insert Destination field before Submission Source if present
+                insert_at = len(normalized_attrs)
+                for i, (lbl, _) in enumerate(normalized_attrs):
+                    if lbl == "Submission Source":
+                        insert_at = i
+                        break
+                normalized_attrs.insert(insert_at, (destination_label, ATTACHMENT_REPO_BASE_URL + generated_name))
 
         if args.dry_run:
             payload, txn_id, share_text = client.sign(event_name, normalized_attrs)
