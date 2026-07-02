@@ -34,7 +34,7 @@
       "category": "Inventory & Supply Chain",
       "description": "Track inventory between managers/locations",
       "canonical_labels": ["Manager Name", "Recipient Name", "Inventory Item", "QR Code", "Quantity", "Latitude", "Longitude", "Attached Filename", "Destination Inventory File Location", "Submission Source"],
-      "required_fields": ["Manager Name", "Recipient Name", "QR Code"],
+      "required_fields": ["Manager Name", "Recipient Name"],
       "dapp_page": "report_inventory_movement.html"
     },
     "SALES EVENT": {
