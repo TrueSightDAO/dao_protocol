@@ -3,6 +3,9 @@
 
 Browser equivalent: dapp.truesight.me/report_contribution.html
 
+TDG Issued is computed from Type + Amount; --tdg-issued is accepted for
+backward-compat but ignored (a warning is printed if it disagrees).
+
 Run:
     python -m truesight_dao_client.modules.report_contribution --help
     # or: truesight-dao-report-contribution --help
@@ -10,6 +13,7 @@ Run:
 import sys
 
 from ..edgar_client import build_event_cli
+from ..rubric import tdg_for, format_tdg
 from ..validators import dao_contributor_name, strip_email_addresses
 
 # Canonical rubric types from the TrueSight DAO Intiatives Scoring Rubric.
@@ -50,10 +54,40 @@ def _normalize_contributors(value: str) -> str:
     return CONTRIBUTOR_SEPARATOR.join(parts)
 
 
+def _authoritative_tdg(attrs):
+    """Recompute 'TDG Issued' from Type + Amount. Ignore (and warn about) any
+    caller-supplied --tdg-issued that disagrees. TDG is computed, never supplied."""
+    d = dict(attrs)
+    ctype = d.get("Type")
+    amount = d.get("Amount")
+    if ctype is None or amount is None:
+        return attrs
+    computed = format_tdg(tdg_for(ctype, amount))
+    supplied = d.get("TDG Issued")
+    if supplied is not None and str(supplied).strip() != computed:
+        print(
+            f"[report-contribution] --tdg-issued {supplied!r} IGNORED; using rubric value "
+            f"{computed} (Type={ctype!r}, Amount={amount!r}). TDG is computed, not client-supplied.",
+            file=sys.stderr,
+        )
+    out, replaced = [], False
+    for lbl, val in attrs:
+        if lbl == "TDG Issued":
+            out.append((lbl, computed))
+            replaced = True
+        else:
+            out.append((lbl, val))
+    if not replaced:
+        idx = next((i for i, (l, _) in enumerate(out) if l == "Contributor(s)"), len(out) - 1)
+        out.insert(idx + 1, ("TDG Issued", computed))
+    return out
+
+
 main = build_event_cli(
     event_name='CONTRIBUTION EVENT',
     canonical_labels=['Type', 'Amount', 'Description', 'Contributor(s)', 'TDG Issued', 'Attached Filename', 'Destination Contribution File Location'],
     dapp_page='report_contribution.html',
+    required_labels=['Type', 'Amount', 'Contributor(s)'],
     validators={
         'Type': _validate_contribution_type,
         'Contributor(s)': dao_contributor_name,
@@ -61,6 +95,7 @@ main = build_event_cli(
     normalizers={
         'Contributor(s)': lambda v: strip_email_addresses(_normalize_contributors(v)),
     },
+    derive=_authoritative_tdg,
 )
 
 if __name__ == "__main__":

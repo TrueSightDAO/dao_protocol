@@ -25,6 +25,7 @@ from ..edgar_client import (
     _ATTACHED_FILENAME_LABEL,
     _generate_attachment_filename,
 )
+from ..rubric import amount_and_tdg_from_time, format_tdg, tdg_for
 from .report_contribution import VALID_CONTRIBUTION_TYPES, _validate_contribution_type
 
 DEFAULT_GEN = (
@@ -55,26 +56,12 @@ def _contributors_from_email(email: str) -> str:
 def _compute_amount_and_tdg(
     contribution_type: str, hours: float | None, minutes: float | None, usd: float | None
 ) -> tuple[str, str]:
-    """Return (amount, tdg_issued) matching the DApp formula.
-
-    Time:
-      - Amount = total minutes (hours*60 + minutes)
-      - TDG    = total hours * 100  (rounded to 2 decimals)
-    USD:
-      - Amount = USD value
-      - TDG    = USD value
-    """
+    """Return (amount, tdg_issued) via the shared rubric (SSOT)."""
     if contribution_type == "Time":
-        h = hours or 0
-        m = minutes or 0
-        total_minutes = int(h * 60 + m)
-        total_hours = h + m / 60.0
-        tdg = round(total_hours * 100, 2)
-        # Match DApp: whole minutes as string, TDG with 2 decimals
-        return str(total_minutes), f"{tdg:.2f}"
+        return amount_and_tdg_from_time(hours, minutes)
     else:  # USD
         val = usd or 0
-        return f"{val:.2f}", f"{val:.2f}"
+        return f"{val:.2f}", format_tdg(tdg_for("USD", val))
 
 
 def main(argv: list[str] | None = None) -> int:
