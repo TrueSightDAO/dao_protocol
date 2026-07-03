@@ -313,11 +313,15 @@ def build_event_cli(
     normalizers: dict[str, callable] | None = None,
     defaults: dict[str, str] | None = None,
     required_labels: list[str] | None = None,
+    derive: callable | None = None,
 ):
     """Returns a `main()` entry point that:
       1. Accepts repeated `--attr "Label=Value"` args.
       2. Also accepts each canonical label as `--snake-case-label VALUE` for ergonomics.
       3. Loads EdgarClient from .env and submits `event_name` with the collected attributes.
+
+    `derive` runs after normalizers and may recompute/override attributes (e.g. authoritative
+    TDG). Raise ValueError for a friendly CLI error.
 
     Used by every file in `modules/` so each one becomes a ~6-line wrapper.
     """
@@ -412,6 +416,14 @@ def build_event_cli(
             if normalizers and lbl in normalizers:
                 val = normalizers[lbl](val)
             normalized_attrs.append((lbl, val))
+
+        # Server/rubric-authoritative overrides (e.g. computed TDG). Runs on the
+        # signed inputs so the caller cannot inject a wrong derived value.
+        if derive is not None:
+            try:
+                normalized_attrs = derive(normalized_attrs)
+            except ValueError as exc:
+                parser.error(str(exc))
 
         client = EdgarClient.from_env()
         if args.generation_source:
