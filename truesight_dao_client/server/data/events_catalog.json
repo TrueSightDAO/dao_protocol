@@ -25,10 +25,17 @@
     },
     "VOTING RIGHTS WITHDRAWAL REQUEST": {
       "category": "Contribution & Finance",
-      "description": "Request to cash out voting rights",
-      "canonical_labels": ["Amount", "Wallet Address"],
-      "required_fields": ["Amount", "Wallet Address"],
+      "description": "Request to cash out voting rights — signed by contributor, emitted as GitHub JSON for paper trail",
+      "canonical_labels": ["Contributor", "Amount to withdraw", "Value per voting right", "Expected total amount (USD)", "Withdrawal method", "PIX Key", "PayLah Mobile", "Venmo Number", "PayPal ID", "Zelle ID", "WiseTransfer Email", "WiseTransfer Full Name", "WiseTransfer IBAN", "WiseTransfer Account Number", "WiseTransfer Bank Name", "WiseTransfer Swift Code", "Western Union First Name", "Western Union Last Name", "Western Union Country", "Western Union City", "Western Union State", "Western Union Address", "Western Union Postal Code", "Western Union Phone Number", "Western Union Email", "Western Union Currency", "Western Union Test Question", "Western Union Test Answer", "Submission Source"],
+      "required_fields": ["Amount to withdraw"],
       "dapp_page": "withdraw_voting_rights.html"
+    },
+    "VOTING RIGHTS WITHDRAWAL SETTLEMENT EVENT": {
+      "category": "Contribution & Finance",
+      "description": "Governor-signed settlement of a voting rights cash-out — deducts TDG from Ledger history, deducts USD from offchain provisions, writes GitHub JSON paper trail",
+      "canonical_labels": ["Cash-Out Request ID", "Contributor", "Voting Rights Withdrawn (TDG)", "Amount Paid (USD)", "Payment Reference", "Payment Method Used", "Settlement Date", "Governor", "Notes", "Proof Attachment URL", "Submission Source"],
+      "required_fields": ["Contributor", "Voting Rights Withdrawn (TDG)", "Amount Paid (USD)", "Settlement Date"],
+      "dapp_page": "withdraw_voting_rights_settlement.html"
     },
     "INVENTORY MOVEMENT": {
       "category": "Inventory & Supply Chain",
@@ -81,8 +88,8 @@
     },
     "QR CODE UPDATE EVENT": {
       "category": "QR Code Operations",
-      "description": "Update QR code metadata (status, email, member)",
-      "canonical_labels": ["QR Code", "Field", "New Value"],
+      "description": "Update QR code metadata (status, email, manager name). NOTE: the GAS regex expects 'Associated Member' (with 'd') — the DApp UI label 'Associate Member' does NOT match. Always use 'Associated Member' in submissions.",
+      "canonical_labels": ["QR Code", "Associated Member", "New Status", "New Email", "Stripe Session ID", "Shipping Provider", "Tracking Number"],
       "required_fields": ["QR Code"],
       "dapp_page": "update_qr_code.html"
     },
