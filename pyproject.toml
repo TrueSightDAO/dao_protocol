@@ -56,3 +56,6 @@ truesight-dao-cache-contributors = "truesight_dao_client.cache.contributors:main
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["truesight_dao_client*"]
+
+[tool.setuptools.package-data]
+truesight_dao_client = ["server/data/*.json"]
