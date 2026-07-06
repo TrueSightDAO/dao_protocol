@@ -16,8 +16,7 @@ Named flags (each maps to the exact label the GAS parser expects):
     --shipping-provider VALUE  (label: Shipping Provider)
     --tracking-number VALUE   (label: Tracking Number)
 
-The --attr escape hatch also works, and the normalizer maps the DApp UI label
-"Associate Member" → "Associated Member" so either spelling is accepted.
+The --attr escape hatch also works.
 """
 import sys
 
