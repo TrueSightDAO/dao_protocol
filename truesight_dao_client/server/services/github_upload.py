@@ -16,6 +16,14 @@ from ..config import get_settings
 
 logger = logging.getLogger("dao_protocol.github_upload")
 _URL_RE = re.compile(r"https://github\.com/([^/]+)/([^/]+)/(?:blob|tree)/([^/]+)/(.+)")
+_EVENT_RE = re.compile(r"\[([A-Z ]+?EVENT)\]")
+
+
+def _event_type(text: str) -> str:
+    m = _EVENT_RE.search(text or "")
+    if m:
+        return m.group(1).lower()
+    return "file"
 
 
 def upload_if_referenced(text: str, file_bytes: bytes | None, filename: str | None = None) -> bool:
@@ -35,8 +43,10 @@ def upload_if_referenced(text: str, file_bytes: bytes | None, filename: str | No
         if get.status_code == 200:
             return True  # already exists — treat as success (matches Rails)
         if get.status_code == 404:
+            event_type = _event_type(text)
+            commit_message = f"Upload {event_type} file: {path}\n\n{text}"
             put = requests.put(api, headers=headers, timeout=60, json={
-                "message": f"Add {path} via dao_protocol",
+                "message": commit_message,
                 "content": base64.b64encode(file_bytes).decode("ascii"),
                 "branch": branch,
             })
