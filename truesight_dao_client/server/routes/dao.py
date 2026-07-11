@@ -50,8 +50,20 @@ _GOVERNOR_ONLY_EVENTS = [
 
 # Target Ledger values accepted for [DAO Inventory Expense Event]. Shipping,
 # supplies, and operational expenses are drawn from the offchain USD balance on
-# the main ledger. Managed ledgers that track their own expenses can be added here.
-_VALID_EXPENSE_LEDGERS = {"offchain"}
+# the main ledger. Managed ledgers that track their own expenses are derived
+# from the treasury cache's ledgers[] array (populated from Shipment Ledger
+# Listing column A). Falls back to {"offchain"} when the cache is unavailable.
+def _get_valid_expense_ledgers() -> set[str]:
+    ledgers = {"offchain"}
+    try:
+        cache = validators.fetch_treasury_cache()
+        for entry in cache.get("ledgers", []):
+            name = (entry.get("ledger_name") or "").strip()
+            if name:
+                ledgers.add(name)
+    except Exception:
+        pass
+    return ledgers
 
 logger = logging.getLogger("dao_protocol.dao")
 
@@ -286,11 +298,12 @@ async def submit_contribution(request: Request, background: BackgroundTasks) -> 
     # --- Target Ledger validation for DAO Inventory Expense Event ---
     if signature_verification == "success" and "[DAO Inventory Expense Event]" in text:
         ledger = (_extract_field(text, "Target Ledger") or "").strip()
-        if ledger not in _VALID_EXPENSE_LEDGERS:
+        if ledger not in _get_valid_expense_ledgers():
+            valid = sorted(_get_valid_expense_ledgers())
             return JSONResponse(
                 {"status": "error",
                  "error": f"Invalid Target Ledger '{ledger or '(empty)'}' for expense. "
-                          f"Shipping and operational expenses must use Target Ledger: offchain."},
+                           f"Accepted ledgers: {', '.join(valid)}."},
                 status_code=422,
             )
 
