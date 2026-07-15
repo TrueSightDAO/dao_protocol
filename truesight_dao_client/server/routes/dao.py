@@ -262,36 +262,6 @@ def _generate_transaction_id() -> str:
     return f"REV-{ts}-{rand}"
 
 
-@router.get("/dao/check_digital_signature")
-async def check_digital_signature(
-    signature: str = Query(..., description="Base64 DER SPKI public key"),
-) -> JSONResponse:
-    """Port of Rails dao_controller#check_digital_signature.
-
-    Returns registration status + contributor info for a public key.
-    """
-    pk = signature.strip()
-    if not pk:
-        return JSONResponse({"registered": False, "error": "Missing signature parameter"}, status_code=400)
-    entry = sigs.find_by_public_key(pk)
-    if not entry:
-        return JSONResponse({"registered": False, "error": "No matching contributor digital signature"}, status_code=404)
-    status = entry.get("status", "")
-    if status == "ACTIVE":
-        return JSONResponse({
-            "registered": True,
-            "contributor_name": entry.get("name", ""),
-            "contributor_email": entry.get("email", ""),
-        }, headers=_ACAO)
-    if status == "VERIFYING":
-        return JSONResponse({
-            "registered": False,
-            "pending_verification": True,
-            "contributor_email": entry.get("email", ""),
-        }, headers=_ACAO)
-    return JSONResponse({"registered": False, "error": f"Unknown status: {status}"}, status_code=404)
-
-
 @router.post("/dao/submit_contribution")
 async def submit_contribution(request: Request, background: BackgroundTasks) -> JSONResponse:
     form = await request.form()
@@ -367,6 +337,7 @@ async def submit_contribution(request: Request, background: BackgroundTasks) -> 
 
     # --- attachment → GitHub upload (when text references a github.com blob/tree URL) ---
     file_uploaded = False
+    design_written = False
     if attachment is not None and hasattr(attachment, "read"):
         try:
             file_bytes = await attachment.read()
@@ -375,6 +346,48 @@ async def submit_contribution(request: Request, background: BackgroundTasks) -> 
             )
         except Exception:
             file_uploaded = False
+
+    # --- design JSON for [DESIGN UPLOAD EVENT] ---
+    if signature_verification == "success" and "[DESIGN UPLOAD EVENT]" in text and file_uploaded:
+        try:
+            import hashlib
+            import json as _json
+            email = (_extract_field(text, "Email") or "").lower().strip()
+            design_id = _extract_field(text, "Design ID") or ""
+            filename = _extract_field(text, "Filename") or ""
+            if email and design_id:
+                eh = hashlib.sha256(email.encode()).hexdigest()
+                json_path = f"designs/{eh}/{design_id}.json"
+                design_written = github_upload.write_design_json(
+                    "TrueSightDAO", "agroverse-designs", "main", json_path,
+                    {
+                        "design_id": design_id,
+                        "email_hash": eh,
+                        "filename": filename,
+                        "image_url": f"https://raw.githubusercontent.com/TrueSightDAO/agroverse-designs/main/designs/{eh}/{design_id}.png",
+                        "dimensions": _extract_field(text, "Dimensions") or "4x2in",
+                        "created_at": (_extract_field(text, "Timestamp") or ""),
+                        "orders": [],
+                    }
+                )
+        except Exception:
+            pass
+
+    # --- design dedup log ---
+    if signature_verification == "success":
+        try:
+            from ..sheets import design_events_log
+            if "[DESIGN UPLOAD EVENT]" in text:
+                email = (_extract_field(text, "Email") or "").lower().strip()
+                design_events_log.log_upload(email, _extract_field(text, "Design ID") or "",
+                                             _extract_field(text, "Filename") or "", text)
+            elif "[DESIGN ORDER EVENT]" in text:
+                email = (_extract_field(text, "Email") or "").lower().strip()
+                design_events_log.log_order(email, _extract_field(text, "Design ID") or "",
+                                            _extract_field(text, "Order ID") or "",
+                                            _extract_field(text, "Quantity") or "", text)
+        except Exception:
+            pass
 
     # --- email onboarding ([EMAIL REGISTERED] / [EMAIL VERIFICATION]) ---
     if signature_verification == "success":
