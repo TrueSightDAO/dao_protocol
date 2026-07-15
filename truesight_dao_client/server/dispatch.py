@@ -71,6 +71,9 @@ ROUTING: list = [
     ("[CONTRIBUTION REVIEW EVENT]", [("REVIEW_PROCESSING", "processApprovalRejections")], False),
     # Currency definition — defines a QR-ready serializable currency in the Currencies tab
     ("[CURRENCY DEFINITION EVENT]", [("CURRENCY_DEFINITION", "processCurrencyDefinitionsFromTelegramChatLogs")], False),
+    # White-label design events — deduped via Design Events tab, processed by GAS
+    ("[DESIGN UPLOAD EVENT]", [("DESIGN_PROCESSING", "processDesignEvents")], False),
+    ("[DESIGN ORDER EVENT]", [("DESIGN_ORDER_PROCESSING", "processDesignOrderEvents")], False),
 ]
 
 

@@ -262,6 +262,36 @@ def _generate_transaction_id() -> str:
     return f"REV-{ts}-{rand}"
 
 
+@router.get("/dao/check_digital_signature")
+async def check_digital_signature(
+    signature: str = Query(..., description="Base64 DER SPKI public key"),
+) -> JSONResponse:
+    """Port of Rails dao_controller#check_digital_signature.
+
+    Returns registration status + contributor info for a public key.
+    """
+    pk = signature.strip()
+    if not pk:
+        return JSONResponse({"registered": False, "error": "Missing signature parameter"}, status_code=400)
+    entry = sigs.find_by_public_key(pk)
+    if not entry:
+        return JSONResponse({"registered": False, "error": "No matching contributor digital signature"}, status_code=404)
+    status = entry.get("status", "")
+    if status == "ACTIVE":
+        return JSONResponse({
+            "registered": True,
+            "contributor_name": entry.get("name", ""),
+            "contributor_email": entry.get("email", ""),
+        }, headers=_ACAO)
+    if status == "VERIFYING":
+        return JSONResponse({
+            "registered": False,
+            "pending_verification": True,
+            "contributor_email": entry.get("email", ""),
+        }, headers=_ACAO)
+    return JSONResponse({"registered": False, "error": f"Unknown status: {status}"}, status_code=404)
+
+
 @router.post("/dao/submit_contribution")
 async def submit_contribution(request: Request, background: BackgroundTasks) -> JSONResponse:
     form = await request.form()

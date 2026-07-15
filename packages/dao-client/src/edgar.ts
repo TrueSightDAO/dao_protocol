@@ -25,6 +25,52 @@ export interface CheckRegistrationResponse {
   error?: string;
 }
 
+export interface DesignUploadResponse {
+  ok: boolean;
+  status: 'uploaded' | 'validation_error' | 'auth_error' | 'server_error';
+  design_id?: string;
+  image_url?: string;
+  error?: string;
+}
+
+export interface DesignOrderResponse {
+  ok: boolean;
+  status: 'ordered' | 'validation_error' | 'auth_error' | 'server_error';
+  order_id?: string;
+  design_id?: string;
+  quantity?: number;
+  unit_price?: number;
+  sku?: string;
+  image_url?: string;
+  error?: string;
+}
+
+export interface DesignListResponse {
+  ok: boolean;
+  status: 'loaded' | 'auth_error' | 'server_error';
+  designs?: DesignEntry[];
+  error?: string;
+}
+
+export interface DesignEntry {
+  design_id: string;
+  email_hash: string;
+  filename: string;
+  image_url: string;
+  dimensions: string;
+  created_at: string;
+  orders: DesignOrderEntry[];
+}
+
+export interface DesignOrderEntry {
+  order_id: string;
+  quantity: number;
+  unit_price: number;
+  sku?: string;
+  status: string;
+  created_at: string;
+}
+
 export class EdgarClient {
   readonly baseUrl: string;
   readonly submitUrl: string;
@@ -230,6 +276,103 @@ export class EdgarClient {
         registered: false,
         error: `Network error: ${err instanceof Error ? err.message : String(err)}`,
       };
+    }
+  }
+
+  async uploadDesign(
+    shareText: string,
+    imageFile: File | Blob,
+    filename: string
+  ): Promise<DesignUploadResponse> {
+    const formData = new FormData();
+    formData.append('text', shareText);
+    formData.append('attachment', imageFile, filename);
+
+    try {
+      const response = await fetch(`${this.baseUrl}/design/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+      const body = await response.json().catch(() => ({}));
+
+      if (response.status === 200 && body.status === 'ok') {
+        return {
+          ok: true,
+          status: 'uploaded',
+          design_id: body.design_id as string,
+          image_url: body.image_url as string,
+        };
+      }
+      if (response.status === 401) {
+        return { ok: false, status: 'auth_error', error: (body.error as string) || 'Authentication failed' };
+      }
+      if (response.status === 422) {
+        return { ok: false, status: 'validation_error', error: (body.error as string) || 'Invalid design file' };
+      }
+      return { ok: false, status: 'server_error', error: (body.error as string) || `HTTP ${response.status}` };
+    } catch (err) {
+      return { ok: false, status: 'server_error', error: `Network error: ${err instanceof Error ? err.message : String(err)}` };
+    }
+  }
+
+  async listDesigns(
+    email: string,
+    publicKey: string,
+    shareText: string
+  ): Promise<DesignListResponse> {
+    const params = new URLSearchParams({
+      email,
+      signature: publicKey,
+      signed_payload: shareText,
+    });
+    try {
+      const response = await fetch(`${this.baseUrl}/design/list?${params}`);
+      const body = await response.json().catch(() => ({}));
+
+      if (response.status === 200 && body.status === 'ok') {
+        return { ok: true, status: 'loaded', designs: body.designs as DesignEntry[] };
+      }
+      if (response.status === 401 || response.status === 403) {
+        return { ok: false, status: 'auth_error', error: (body.error as string) || 'Authentication failed' };
+      }
+      return { ok: false, status: 'server_error', error: (body.error as string) || `HTTP ${response.status}` };
+    } catch (err) {
+      return { ok: false, status: 'server_error', error: `Network error: ${err instanceof Error ? err.message : String(err)}` };
+    }
+  }
+
+  async orderDesign(shareText: string): Promise<DesignOrderResponse> {
+    const formData = new FormData();
+    formData.append('text', shareText);
+
+    try {
+      const response = await fetch(`${this.baseUrl}/design/order`, {
+        method: 'POST',
+        body: formData,
+      });
+      const body = await response.json().catch(() => ({}));
+
+      if (response.status === 200 && body.status === 'ok') {
+        return {
+          ok: true,
+          status: 'ordered',
+          order_id: body.order_id as string,
+          design_id: body.design_id as string,
+          quantity: body.quantity as number,
+          unit_price: body.unit_price as number,
+          sku: body.sku as string,
+          image_url: body.image_url as string,
+        };
+      }
+      if (response.status === 401) {
+        return { ok: false, status: 'auth_error', error: (body.error as string) || 'Authentication failed' };
+      }
+      if (response.status === 422 || response.status === 400) {
+        return { ok: false, status: 'validation_error', error: (body.error as string) || 'Invalid order' };
+      }
+      return { ok: false, status: 'server_error', error: (body.error as string) || `HTTP ${response.status}` };
+    } catch (err) {
+      return { ok: false, status: 'server_error', error: `Network error: ${err instanceof Error ? err.message : String(err)}` };
     }
   }
 }

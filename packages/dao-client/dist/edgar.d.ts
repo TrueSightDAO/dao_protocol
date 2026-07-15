@@ -21,6 +21,47 @@ export interface CheckRegistrationResponse {
     contributor_email?: string;
     error?: string;
 }
+export interface DesignUploadResponse {
+    ok: boolean;
+    status: 'uploaded' | 'validation_error' | 'auth_error' | 'server_error';
+    design_id?: string;
+    image_url?: string;
+    error?: string;
+}
+export interface DesignOrderResponse {
+    ok: boolean;
+    status: 'ordered' | 'validation_error' | 'auth_error' | 'server_error';
+    order_id?: string;
+    design_id?: string;
+    quantity?: number;
+    unit_price?: number;
+    sku?: string;
+    image_url?: string;
+    error?: string;
+}
+export interface DesignListResponse {
+    ok: boolean;
+    status: 'loaded' | 'auth_error' | 'server_error';
+    designs?: DesignEntry[];
+    error?: string;
+}
+export interface DesignEntry {
+    design_id: string;
+    email_hash: string;
+    filename: string;
+    image_url: string;
+    dimensions: string;
+    created_at: string;
+    orders: DesignOrderEntry[];
+}
+export interface DesignOrderEntry {
+    order_id: string;
+    quantity: number;
+    unit_price: number;
+    sku?: string;
+    status: string;
+    created_at: string;
+}
 export declare class EdgarClient {
     readonly baseUrl: string;
     readonly submitUrl: string;
@@ -50,5 +91,8 @@ export declare class EdgarClient {
      * Returns the authoritative registration status for a public key.
      */
     checkRegistration(publicKey: string): Promise<CheckRegistrationResponse>;
+    uploadDesign(shareText: string, imageFile: File | Blob, filename: string): Promise<DesignUploadResponse>;
+    listDesigns(email: string, publicKey: string, shareText: string): Promise<DesignListResponse>;
+    orderDesign(shareText: string): Promise<DesignOrderResponse>;
 }
 //# sourceMappingURL=edgar.d.ts.map

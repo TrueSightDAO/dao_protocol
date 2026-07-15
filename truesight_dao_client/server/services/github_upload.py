@@ -34,17 +34,22 @@ def upload_if_referenced(text: str, file_bytes: bytes | None, filename: str | No
     if not m:
         return False
     owner, repo, branch, path = m.group(1), m.group(2), m.group(3), m.group(4).strip()
-    # strip any trailing query/fragment from the captured path
     path = path.split("?")[0].split("#")[0]
+    return _put_file(pat, owner, repo, branch, path, file_bytes, filename, text)
+
+
+def _put_file(pat: str, owner: str, repo: str, branch: str, path: str,
+              file_bytes: bytes, filename: str | None = None,
+              text: str | None = None) -> bool:
     api = f"https://api.github.com/repos/{owner}/{repo}/contents/{path}"
     headers = {"Authorization": f"token {pat}", "Accept": "application/vnd.github+json"}
     try:
         get = requests.get(api, headers=headers, timeout=30)
         if get.status_code == 200:
-            return True  # already exists — treat as success (matches Rails)
+            return True
         if get.status_code == 404:
-            event_type = _event_type(text)
-            commit_message = f"Upload {event_type} file: {path}\n\n{text}"
+            event_type = _event_type(text or "")
+            commit_message = f"Upload {event_type} file: {path}\n\n{text or ''}"
             put = requests.put(api, headers=headers, timeout=60, json={
                 "message": commit_message,
                 "content": base64.b64encode(file_bytes).decode("ascii"),
@@ -59,3 +64,80 @@ def upload_if_referenced(text: str, file_bytes: bytes | None, filename: str | No
     except requests.RequestException as exc:
         logger.warning("github upload failed: %s", exc)
         return False
+
+
+def write_design_json(owner: str, repo: str, branch: str, path: str,
+                      content: dict) -> bool:
+    pat = get_settings().github_pat
+    if not pat:
+        return False
+    import json as _json
+    json_bytes = _json.dumps(content, indent=2).encode("utf-8")
+    return _put_file(pat, owner, repo, branch, path, json_bytes, filename=path.rsplit("/", 1)[-1],
+                     text="[DESIGN UPLOAD EVENT]")
+
+
+def append_order_to_design(owner: str, repo: str, branch: str, json_path: str,
+                           order_entry: dict) -> bool:
+    pat = get_settings().github_pat
+    if not pat:
+        return False
+    import json as _json
+    api = f"https://api.github.com/repos/{owner}/{repo}/contents/{json_path}"
+    headers = {"Authorization": f"token {pat}", "Accept": "application/vnd.github+json"}
+    try:
+        get = requests.get(api, headers=headers, timeout=30)
+        if get.status_code != 200:
+            logger.warning("design json GET %s for %s/%s:%s", get.status_code, owner, repo, json_path)
+            return False
+        body = get.json()
+        existing = _json.loads(base64.b64decode(body["content"]).decode("utf-8"))
+        if "orders" not in existing:
+            existing["orders"] = []
+        existing["orders"].append(order_entry)
+        json_bytes = _json.dumps(existing, indent=2).encode("utf-8")
+        commit_message = f"Append order to design: {json_path}"
+        put = requests.put(api, headers=headers, timeout=60, json={
+            "message": commit_message,
+            "content": base64.b64encode(json_bytes).decode("ascii"),
+            "branch": branch,
+            "sha": body["sha"],
+        })
+        return put.status_code in (200, 201)
+    except requests.RequestException as exc:
+        logger.warning("append_order failed: %s", exc)
+        return False
+
+
+def list_design_directory(owner: str, repo: str, path: str) -> list[dict] | None:
+    pat = get_settings().github_pat
+    if not pat:
+        return None
+    api = f"https://api.github.com/repos/{owner}/{repo}/contents/{path}"
+    headers = {"Authorization": f"token {pat}", "Accept": "application/vnd.github+json"}
+    try:
+        resp = requests.get(api, headers=headers, timeout=30)
+        if resp.status_code == 200:
+            return resp.json()
+        logger.warning("list_design_directory GET %s for %s/%s:%s", resp.status_code, owner, repo, path)
+        return None
+    except requests.RequestException as exc:
+        logger.warning("list_design_directory failed: %s", exc)
+        return None
+
+
+def get_file_content(owner: str, repo: str, path: str) -> bytes | None:
+    pat = get_settings().github_pat
+    if not pat:
+        return None
+    api = f"https://api.github.com/repos/{owner}/{repo}/contents/{path}"
+    headers = {"Authorization": f"token {pat}", "Accept": "application/vnd.github+json"}
+    try:
+        resp = requests.get(api, headers=headers, timeout=30)
+        if resp.status_code == 200:
+            body = resp.json()
+            return base64.b64decode(body["content"])
+        return None
+    except requests.RequestException as exc:
+        logger.warning("get_file_content failed: %s", exc)
+        return None

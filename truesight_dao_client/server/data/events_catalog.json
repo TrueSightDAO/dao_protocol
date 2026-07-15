@@ -225,6 +225,27 @@
       "canonical_labels": ["Farm Name", "Location", "Owner", "Acreage"],
       "required_fields": ["Farm Name", "Location"],
       "dapp_page": "register_farm.html"
+    },
+    "PRODUCT REGISTRATION EVENT": {
+      "category": "Inventory & Supply Chain",
+      "description": "Register a new product SKU in the Agroverse SKUs sheet",
+      "canonical_labels": ["Product ID", "Product Name", "Price", "Category", "Weight", "Image Path", "GTIN"],
+      "required_fields": ["Product ID", "Product Name", "Price"],
+      "dapp_page": "create_signature.html"
+    },
+    "DESIGN UPLOAD EVENT": {
+      "category": "Inventory & Supply Chain",
+      "description": "Upload white-label chocolate bar artwork (4in x 2in at 300 DPI)",
+      "canonical_labels": ["Email", "Design ID", "Filename", "Dimensions", "Attached Filename", "Destination Design File Location"],
+      "required_fields": ["Email", "Design ID", "Filename"],
+      "dapp_page": "agroverse.shop/white-label/"
+    },
+    "DESIGN ORDER EVENT": {
+      "category": "Inventory & Supply Chain",
+      "description": "Place an order for white-label chocolate bars with a selected design",
+      "canonical_labels": ["Email", "Design ID", "Quantity", "SKU", "Unit Price"],
+      "required_fields": ["Email", "Design ID", "Quantity"],
+      "dapp_page": "agroverse.shop/white-label/"
     }
   }
 }

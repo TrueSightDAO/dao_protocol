@@ -177,5 +177,89 @@ export class EdgarClient {
             };
         }
     }
+    async uploadDesign(shareText, imageFile, filename) {
+        const formData = new FormData();
+        formData.append('text', shareText);
+        formData.append('attachment', imageFile, filename);
+        try {
+            const response = await fetch(`${this.baseUrl}/design/upload`, {
+                method: 'POST',
+                body: formData,
+            });
+            const body = await response.json().catch(() => ({}));
+            if (response.status === 200 && body.status === 'ok') {
+                return {
+                    ok: true,
+                    status: 'uploaded',
+                    design_id: body.design_id,
+                    image_url: body.image_url,
+                };
+            }
+            if (response.status === 401) {
+                return { ok: false, status: 'auth_error', error: body.error || 'Authentication failed' };
+            }
+            if (response.status === 422) {
+                return { ok: false, status: 'validation_error', error: body.error || 'Invalid design file' };
+            }
+            return { ok: false, status: 'server_error', error: body.error || `HTTP ${response.status}` };
+        }
+        catch (err) {
+            return { ok: false, status: 'server_error', error: `Network error: ${err instanceof Error ? err.message : String(err)}` };
+        }
+    }
+    async listDesigns(email, publicKey, shareText) {
+        const params = new URLSearchParams({
+            email,
+            signature: publicKey,
+            signed_payload: shareText,
+        });
+        try {
+            const response = await fetch(`${this.baseUrl}/design/list?${params}`);
+            const body = await response.json().catch(() => ({}));
+            if (response.status === 200 && body.status === 'ok') {
+                return { ok: true, status: 'loaded', designs: body.designs };
+            }
+            if (response.status === 401 || response.status === 403) {
+                return { ok: false, status: 'auth_error', error: body.error || 'Authentication failed' };
+            }
+            return { ok: false, status: 'server_error', error: body.error || `HTTP ${response.status}` };
+        }
+        catch (err) {
+            return { ok: false, status: 'server_error', error: `Network error: ${err instanceof Error ? err.message : String(err)}` };
+        }
+    }
+    async orderDesign(shareText) {
+        const formData = new FormData();
+        formData.append('text', shareText);
+        try {
+            const response = await fetch(`${this.baseUrl}/design/order`, {
+                method: 'POST',
+                body: formData,
+            });
+            const body = await response.json().catch(() => ({}));
+            if (response.status === 200 && body.status === 'ok') {
+                return {
+                    ok: true,
+                    status: 'ordered',
+                    order_id: body.order_id,
+                    design_id: body.design_id,
+                    quantity: body.quantity,
+                    unit_price: body.unit_price,
+                    sku: body.sku,
+                    image_url: body.image_url,
+                };
+            }
+            if (response.status === 401) {
+                return { ok: false, status: 'auth_error', error: body.error || 'Authentication failed' };
+            }
+            if (response.status === 422 || response.status === 400) {
+                return { ok: false, status: 'validation_error', error: body.error || 'Invalid order' };
+            }
+            return { ok: false, status: 'server_error', error: body.error || `HTTP ${response.status}` };
+        }
+        catch (err) {
+            return { ok: false, status: 'server_error', error: `Network error: ${err instanceof Error ? err.message : String(err)}` };
+        }
+    }
 }
 //# sourceMappingURL=edgar.js.map
