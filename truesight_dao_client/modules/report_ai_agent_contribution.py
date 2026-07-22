@@ -6,7 +6,12 @@ Convention (full detail):
 
 Requires:
   - ``./.env`` (cwd) with EMAIL, PUBLIC_KEY, PRIVATE_KEY (see README / ``truesight-dao-auth login``).
-  - At least one --pr URL under https://github.com/TrueSightDAO/ (merged or open PR).
+  - At least one --pr URL under https://github.com/TrueSightDAO/ — a pull request
+    URL (merged or open), OR a commit URL when the work was merged directly
+    without a PR (e.g. an explicit governor-directed merge; see
+    DAO_CLIENT_AI_AGENT_CONTRIBUTIONS.md § "PR or commit URL evidence",
+    2026-07-22 — added after an interactive session merged several branches
+    directly and the AI-agent submission had no PR to cite).
 
 Run:
   python -m truesight_dao_client.modules.report_ai_agent_contribution --help
@@ -35,6 +40,18 @@ PR_PATTERN = re.compile(
     r"^https://github\.com/TrueSightDAO/[^/]+/pull/\d+/?(\?.*)?$",
     re.IGNORECASE,
 )
+# Fallback evidence for work that was merged directly (no PR) — e.g. a
+# governor explicitly directed "merge and deploy" in an interactive session.
+# Requires a full or short SHA (7-40 hex chars) so a bare .../commits/ (branch
+# history listing) can't slip through as "evidence".
+COMMIT_PATTERN = re.compile(
+    r"^https://github\.com/TrueSightDAO/[^/]+/commit/[0-9a-fA-F]{7,40}/?$",
+    re.IGNORECASE,
+)
+
+
+def _is_valid_evidence_url(url: str) -> bool:
+    return bool(PR_PATTERN.match(url) or COMMIT_PATTERN.match(url))
 
 
 def _contributors_from_email(email: str) -> str:
@@ -66,7 +83,10 @@ def _compute_amount_and_tdg(
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
-        description="Submit [CONTRIBUTION EVENT] for AI agent work with mandatory TrueSightDAO PR links.",
+        description=(
+            "Submit [CONTRIBUTION EVENT] for AI agent work with mandatory TrueSightDAO "
+            "PR (or, for direct merges, commit) links."
+        ),
     )
     p.add_argument("--title", required=True, help="Short title (prepended to Description).")
     p.add_argument(
@@ -85,7 +105,11 @@ def main(argv: list[str] | None = None) -> int:
         action="append",
         default=[],
         metavar="URL",
-        help="Repeatable. Must match https://github.com/TrueSightDAO/<repo>/pull/<n>",
+        help=(
+            "Repeatable. Must match https://github.com/TrueSightDAO/<repo>/pull/<n>, "
+            "or https://github.com/TrueSightDAO/<repo>/commit/<sha> when the work "
+            "was merged directly without a PR."
+        ),
     )
     p.add_argument(
         "--type",
@@ -149,11 +173,16 @@ def main(argv: list[str] | None = None) -> int:
 
     prs = list(args.pr or [])
     if not prs:
-        p.error("At least one --pr URL is required (TrueSightDAO org pull request).")
+        p.error(
+            "At least one --pr URL is required (TrueSightDAO pull request, or a "
+            "commit URL if the work was merged directly without a PR)."
+        )
     for url in prs:
         u = url.strip()
-        if not PR_PATTERN.match(u):
-            p.error(f"Invalid --pr (must be TrueSightDAO pull URL): {u!r}")
+        if not _is_valid_evidence_url(u):
+            p.error(
+                f"Invalid --pr (must be a TrueSightDAO pull or commit URL): {u!r}"
+            )
 
     # Normalize type to short form for internal logic
     _type_map = {
@@ -179,7 +208,7 @@ def main(argv: list[str] | None = None) -> int:
     # Use the canonical type label from the rubric, not the internal short form
     type_label = args.type if args.type in VALID_CONTRIBUTION_TYPES else "Time (Minutes)"
 
-    pr_block = "Pull requests (GitHub evidence):\n" + "\n".join(f"- {u.strip()}" for u in prs)
+    pr_block = "GitHub evidence (PR or commit):\n" + "\n".join(f"- {u.strip()}" for u in prs)
     description = f"{args.title.strip()}\n\n{pr_block}\n\nDetails:\n{body}"
 
     client = EdgarClient.from_env()
