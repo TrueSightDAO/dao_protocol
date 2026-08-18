@@ -74,6 +74,13 @@ ROUTING: list = [
     # White-label design events — deduped via Design Events tab, processed by GAS
     ("[DESIGN UPLOAD EVENT]", [("DESIGN_PROCESSING", "processDesignEvents")], False),
     ("[DESIGN ORDER EVENT]", [("DESIGN_ORDER_PROCESSING", "processDesignOrderEvents")], False),
+    # Governor-only: links a Sunmint [TREE PLANTING EVENT] submission to a sold Agroverse QR code.
+    # Handler (tokenomics process_tree_planting_link.js) has its own cron fallback + real governor
+    # enforcement — this entry is purely a latency optimization, same as every other row here.
+    # Spec: agentic_ai_context/plans/SUNMINT_TREE_QR_LINKING_PLAN.md (PR5).
+    ("[TREE PLANTING LINK EVENT]", [
+        ("TREE_PLANTING_LINK", "processTreePlantingLinksFromTelegramChatLogs"),
+    ], False),
 ]
 
 

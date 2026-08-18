@@ -93,6 +93,13 @@
       "required_fields": ["QR Code"],
       "dapp_page": "update_qr_code.html"
     },
+    "TREE PLANTING LINK EVENT": {
+      "category": "QR Code Operations",
+      "description": "Governor-only. Links a Sunmint tree-planting submission (SunMint Tree Planting sheet, status NEW) to a sold Agroverse QR code (status SOLD) — flips the QR to ASSIGNED_TO_TREE, copies planting evidence, books the ledger fulfillment entry, and notifies the QR owner. Rejected server-side (GAS Governors tab check) if the signer isn't a governor.",
+      "canonical_labels": ["QR Code", "SunMint Submission Message ID", "Updated by", "Submission Source"],
+      "required_fields": ["QR Code", "SunMint Submission Message ID"],
+      "dapp_page": "link_tree_planting.html"
+    },
     "BATCH QR CODE REQUEST": {
       "category": "QR Code Operations",
       "description": "Request batch QR code generation",
