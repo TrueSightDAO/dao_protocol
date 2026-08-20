@@ -262,6 +262,81 @@ def _generate_transaction_id() -> str:
     return f"REV-{ts}-{rand}"
 
 
+@router.post("/dao/verify-signature")
+async def verify_signature(request: Request) -> JSONResponse:
+    """Port of Rails `dao#verify_signature` (PR8a).
+
+    Returns `{valid, message}` on a parseable signature (valid true/false), or
+    `{valid: false, error}` (422) when the input can't be verified — mirroring Rails'
+    `ArgumentError → 422`. `input_text` is read from form body, query string, or JSON body
+    (Rails merged all into `params`), so the POS clients' existing call shape keeps working.
+
+    Restored 2026-08-19 — accidentally deleted in ab2fa52 (2026-06-19, PR3: CONTRIBUTION
+    REVIEW EVENT handler) while adding /dao/submit_contribution_review to the same file;
+    live on edgar.truesight.me (:8010, nginx exact-match) but 404ing since then. Discovered
+    while debugging a stuck IVY-program email-verification sign-in that turned out to be
+    platform-wide, not program-specific.
+    """
+    input_text = ""
+    try:
+        form = await request.form()
+        input_text = str(form.get("input_text") or "")
+    except Exception:  # noqa: BLE001 — non-form body
+        input_text = ""
+    if not input_text:
+        input_text = str(request.query_params.get("input_text") or "")
+    if not input_text:
+        try:
+            body = await request.json()
+            if isinstance(body, dict):
+                input_text = str(body.get("input_text") or "")
+        except Exception:  # noqa: BLE001 — non-JSON body
+            pass
+    try:
+        result = verify.verify(input_text)
+        return JSONResponse({"valid": bool(result.get("success")),
+                             "message": "Signature verification successful"})
+    except verify.VerificationError as e:
+        return JSONResponse({"valid": False, "error": str(e)}, status_code=422)
+
+
+@router.get("/dao/check_digital_signature")
+async def check_digital_signature(signature: str = "") -> JSONResponse:
+    """Port of Rails `dao#check_digital_signature` (PR8a).
+
+    Public GET lookup `?signature=<SPKI base64>` → resolves the contributor by public key.
+    Three response shapes (ACTIVE → registered, VERIFYING → pending, else 404), each with
+    `Access-Control-Allow-Origin: *` to match Rails (the DApp/POS pages call it cross-origin).
+
+    Restored 2026-08-19 — deleted twice: first in ab2fa52 (2026-06-19, collateral damage
+    from the same refactor that dropped verify-signature above), re-added independently in
+    90f67f3 (white-label design management), then deleted again in 2122012 (2026-07-14,
+    "refactor: remove design endpoints") whose commit message mislabeled it a "design
+    endpoints... stub" — it's actually the endpoint every create_signature.html-based
+    sign-in flow across the whole platform depends on to resolve registration status. This
+    restores the original PR8a implementation (matches tests/test_dao_signature.py exactly),
+    not the later Query(...)-based variant.
+    """
+    public_key = (signature or "").strip()
+    if not public_key:
+        return JSONResponse({"error": "signature is required"}, status_code=400, headers=_ACAO)
+    try:
+        record = sigs.find_by_public_key(public_key)
+    except Exception as e:  # noqa: BLE001
+        return JSONResponse({"registered": False, "error": str(e)}, status_code=500, headers=_ACAO)
+    if record and record.get("status") == "ACTIVE":
+        return JSONResponse({"registered": True,
+                             "contributor_name": record.get("name") or "",
+                             "contributor_email": record.get("email") or ""}, headers=_ACAO)
+    if record and record.get("status") == "VERIFYING":
+        return JSONResponse({"registered": False,
+                             "pending_verification": True,
+                             "contributor_email": record.get("email") or ""}, headers=_ACAO)
+    return JSONResponse({"registered": False,
+                         "error": "No matching contributor digital signature"},
+                        status_code=404, headers=_ACAO)
+
+
 @router.post("/dao/submit_contribution")
 async def submit_contribution(request: Request, background: BackgroundTasks) -> JSONResponse:
     form = await request.form()
