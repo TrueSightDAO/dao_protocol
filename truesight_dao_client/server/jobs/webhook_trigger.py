@@ -38,6 +38,24 @@ def trigger(webhook_url: str, action: str, description: str | None = None) -> bo
     return False
 
 
+def trigger_post(webhook_url: str, json_body: dict, description: str | None = None) -> bool:
+    """POST JSON to the webhook (e.g. GAS doPost needs the full signed event text). Same retry logic."""
+    label = description or str(json_body)[:80]
+    for attempt in range(1, _MAX_ATTEMPTS + 1):
+        try:
+            resp = requests.post(webhook_url, json=json_body, timeout=_TIMEOUT)
+            if resp.ok:
+                logger.info("webhook POST ok: %s (%s)", label, webhook_url)
+                return True
+            logger.warning("webhook POST non-2xx %s: %s (%s) \u2014 cron fallback", resp.status_code, label, webhook_url)
+            return False  # don't retry non-2xx (matches GET behaviour)
+        except requests.RequestException as exc:
+            logger.warning("webhook POST attempt %d/%d failed: %s \u2014 %s", attempt, _MAX_ATTEMPTS, label, exc)
+            if attempt < _MAX_ATTEMPTS:
+                time.sleep(2 * attempt)
+    return False
+
+
 def trigger_with_params(webhook_url: str, params: dict, description: str | None = None) -> bool:
     """GET webhook_url with arbitrary query params. Same retry logic as trigger()."""
     label = description or str(params)

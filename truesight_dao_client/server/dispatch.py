@@ -79,7 +79,10 @@ ROUTING: list = [
     # enforcement — this entry is purely a latency optimization, same as every other row here.
     # Spec: agentic_ai_context/plans/SUNMINT_TREE_QR_LINKING_PLAN.md (PR5).
     ("[TREE PLANTING LINK EVENT]", [
-        ("TREE_PLANTING_LINK", "processTreePlantingLinksFromTelegramChatLogs"),
+        ("TREE_PLANTING_PROCESSING", "processTreePlantingLinksFromTelegramChatLogs"),
+    ], False),
+    ("[TREE PLANTING REJECT EVENT]", [
+        ("TREE_PLANTING_PROCESSING", "processTreePlantingLinksFromTelegramChatLogs"),
     ], False),
 ]
 
@@ -113,6 +116,10 @@ def dispatch_event(text: str) -> None:
                         "inviter_email": _extract_field(text, "Governor Email") or "",
                     }
                     webhook_trigger.trigger_with_params(url, params, description=action)
+                elif env_key == "TREE_PLANTING_PROCESSING":
+                    # GAS doPost needs the full signed event text (it appends a row + runs the
+                    # processor immediately). GET ?action= alone can't carry the message.
+                    webhook_trigger.trigger_post(url, {"message": text}, description=action)
                 else:
                     webhook_trigger.trigger(url, action)
             if enqueue_inventory:
