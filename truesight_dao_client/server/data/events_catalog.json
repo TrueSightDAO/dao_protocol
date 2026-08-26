@@ -226,6 +226,13 @@
       "required_fields": ["Tree Count", "Location"],
       "dapp_page": "report_tree_planting.html"
     },
+    "TREE GROWTH MONITORING EVENT": {
+      "category": "QR Code Operations",
+      "description": "Farmer-submitted tree growth measurement (photo of calibration card against trunk at breast height + context photo). Client RSA-2048 signed, POSTed to Edgar; GAS mirrors photos to TrueSightDAO/sunmint images/growth/, the GitHub Action runs PM002 analysis and commits analysis.json, and the handler appends the measurement row (Tree Growth Measurements tab), writes per-tree JSON history, and logs to Telegram Chat Logs. Photos + analysis commit URL are carried on the event for VVB audit.",
+      "canonical_labels": ["Tree ID", "Species", "DBH (cm)", "Latitude", "Longitude", "Measurement Time", "Close-up Photo URL", "Context Photo URL", "Analysis Commit URL", "Nearby Trees", "Submission Source"],
+      "required_fields": ["Tree ID", "DBH (cm)"],
+      "dapp_page": "monitor_tree_growth.html"
+    },
     "FARM REGISTRATION EVENT": {
       "category": "Other",
       "description": "Register a farm for tree planting and carbon credit programs",
