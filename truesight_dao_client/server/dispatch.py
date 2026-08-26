@@ -81,6 +81,13 @@ ROUTING: list = [
     ("[TREE PLANTING LINK EVENT]", [
         ("TREE_PLANTING_LINK", "processTreePlantingLinksFromTelegramChatLogs"),
     ], False),
+    # Farmer-submitted tree growth monitoring measurement (photo + calibration card).
+    # GAS handler mirrors photos to TrueSightDAO/sunmint images/growth/, the GitHub Action
+    # runs PM002 analysis and commits analysis.json; handler appends the measurement row
+    # (Tree Growth Measurements tab), writes per-tree JSON history, logs to Telegram Chat Logs.
+    ("[TREE GROWTH MONITORING EVENT]", [
+        ("TREE_GROWTH_MONITORING", "processTreeGrowthMonitoringFromTelegramChatLogs"),
+    ], False),
 ]
 
 
