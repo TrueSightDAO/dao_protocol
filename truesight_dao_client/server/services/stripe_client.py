@@ -45,8 +45,16 @@ def retrieve_session_with_charges(session_id: str):
     s = _stripe()
     if s is None:
         return None
+    # Expand latest_charge + its balance_transaction so _reconcile gets charge & fee
+    # in one round-trip (stripe>=7 charges.data may not be populated otherwise).
     return s.checkout.Session.retrieve(
-        session_id, expand=["payment_intent", "payment_intent.charges"]
+        session_id,
+        expand=[
+            "payment_intent",
+            "payment_intent.latest_charge",
+            "payment_intent.latest_charge.balance_transaction",
+            "payment_intent.charges",
+        ],
     )
 
 

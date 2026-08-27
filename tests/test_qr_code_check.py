@@ -103,6 +103,35 @@ def test_session_reconcile_succeeds_when_inventory_snapshot_raises(monkeypatch):
     assert r.status_code == 302 and "status=SOLD" in r.headers["location"]
 
 
+def test_session_reconcile_handles_stripeobject_metadata(monkeypatch):
+    """Regression: stripe>=7 metadata is a StripeObject with NO .get() — must not 500.
+    (Production failure 2026-08-27: KeyError: 'get' -> HTTP 500 on checkout.)"""
+    class FakeStripeObject:
+        def __init__(self, **kw):
+            self.__dict__.update(kw)
+    monkeypatch.setattr(qr_code_lookup, "lookup", lambda c: _MINTED)
+    charge = SimpleNamespace(amount=500, balance_transaction="bt_1")
+    session = FakeStripeObject(
+        payment_status="paid",
+        metadata=FakeStripeObject(qr_code="QR1"),  # StripeObject: no .get(), not a dict
+        payment_intent=SimpleNamespace(charges=SimpleNamespace(data=[charge])),
+        customer_details=FakeStripeObject(email="buyer@example.com"),
+        customer_email=None,
+        created=1700000000,
+    )
+    monkeypatch.setattr(stripe_client, "retrieve_session_with_charges", lambda sid: session)
+    monkeypatch.setattr(stripe_client, "retrieve_balance_transaction", lambda bt: SimpleNamespace(fee=52))
+    monkeypatch.setattr(qr_code_sales, "already_recorded", lambda c: False)
+    rec = {}
+    monkeypatch.setattr(qr_code_sales, "mark_sold_and_record",
+                        lambda *a, **k: rec.update(args=a) or {"ok": True})
+    r = client.get("/qr-code-check?qr_code=QR1&session_id=cs_test_1")
+    assert r.status_code == 302, r.text
+    assert "status=SOLD" in r.headers["location"]
+    # net = (500-52)/100 = 4.48, fee = 0.52, total = 5.0
+    assert rec["args"][2] == 4.48 and rec["args"][3] == 0.52 and rec["args"][4] == 5.0
+
+
 def test_session_unpaid_is_400(monkeypatch):
     monkeypatch.setattr(qr_code_lookup, "lookup", lambda c: _MINTED)
     s = _paid_session(); s.payment_status = "unpaid"

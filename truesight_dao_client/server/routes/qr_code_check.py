@@ -44,6 +44,21 @@ def _slugify(product: str) -> str:
     return slug[:80]
 
 
+def _stripe_get(obj, key, default=None):
+    """Dict/attr-safe read of a Stripe object (StripeObject, dict, or None).
+
+    stripe >= 7 StripeObject has no .get() and no __getitem__ for missing keys;
+    attribute access raises AttributeError for unexpanded sub-objects. Normalize."""
+    if obj is None:
+        return default
+    if isinstance(obj, dict):
+        return obj.get(key, default)
+    try:
+        return getattr(obj, key)
+    except (AttributeError, KeyError, TypeError):
+        return default
+
+
 def _redirect_with_utm(dest: str, qr_code: str, product: str, status: str) -> RedirectResponse:
     query = {"product": product, "qr_code": qr_code}
     if status:
@@ -130,7 +145,7 @@ def _reconcile(qr_code: str, session_id: str, result: dict) -> object:
         return JSONResponse({"error": "Stripe not configured"}, status_code=502)
 
     paid = getattr(session, "payment_status", None) == "paid"
-    meta_qr = (getattr(session, "metadata", None) or {}).get("qr_code")
+    meta_qr = _stripe_get(getattr(session, "metadata", None), "qr_code")
     if not (paid and meta_qr == qr_code):
         return JSONResponse({"error": "Invalid or unpaid Stripe session"}, status_code=400)
 
@@ -138,15 +153,29 @@ def _reconcile(qr_code: str, session_id: str, result: dict) -> object:
         return JSONResponse({"error": f"QR code {qr_code} already recorded in QR Code Sales"}, status_code=400)
 
     try:
-        charge = session.payment_intent.charges.data[0]
-        bt = charge.balance_transaction
+        # Charge + balance transaction. Prefer latest_charge (expanded with its
+        # balance_transaction by retrieve_session_with_charges); fall back to the
+        # older charges.data[0] shape for sessions created before that expand was
+        # added. Both StripeObject and dict shapes are handled via _stripe_get.
+        pi = _stripe_get(session, "payment_intent")
+        charge = _stripe_get(pi, "latest_charge")
+        if charge is None:
+            charges = _stripe_get(pi, "charges")
+            data = _stripe_get(charges, "data") or []
+            charge = data[0] if data else None
+        if charge is None:
+            return JSONResponse({"error": "No charge found on payment intent"}, status_code=400)
+        amount = _stripe_get(charge, "amount") or 0
+        bt = _stripe_get(charge, "balance_transaction")
         if isinstance(bt, str):
             bt = stripe_client.retrieve_balance_transaction(bt)
-        total = charge.amount / 100.0
-        fee = bt.fee / 100.0
-        net = (charge.amount - bt.fee) / 100.0
-        buyer = (getattr(session, "customer_details", None) or {}).get("email") or getattr(session, "customer_email", None) or ""
-        sales_date = datetime.fromtimestamp(session.created, tz=timezone.utc).strftime("%Y%m%d")
+        fee = _stripe_get(bt, "fee") or 0
+        total = amount / 100.0
+        fee = fee / 100.0
+        net = (amount - int(fee * 100)) / 100.0
+        customer = _stripe_get(session, "customer_details")
+        buyer = _stripe_get(customer, "email") or _stripe_get(session, "customer_email") or ""
+        sales_date = datetime.fromtimestamp(_stripe_get(session, "created", 0), tz=timezone.utc).strftime("%Y%m%d")
     except Exception as exc:
         return JSONResponse({"error": f"Unable to read charge/balance transaction: {exc}"}, status_code=400)
 
