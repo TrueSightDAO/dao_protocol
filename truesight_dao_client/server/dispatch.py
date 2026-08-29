@@ -81,6 +81,13 @@ ROUTING: list = [
     ("[TREE PLANTING LINK EVENT]", [
         ("TREE_PLANTING_LINK", "processTreePlantingLinksFromTelegramChatLogs"),
     ], False),
+    # Farmer-submitted plain tree planting event (site index page -> [TREE PLANTING EVENT]).
+    # GAS handler (tokenomics process_tree_planting_telegram_logs.js) scans Telegram Chat Logs,
+    # dedups by message/file ID, appends to the SunMint Tree Planting tab (the tree index
+    # builder reads this tab). Same latency-optimization pattern as every other row.
+    ("[TREE PLANTING EVENT]", [
+        ("TREE_PLANTING_PROCESSING", "processTreePlantingTelegramLogs"),
+    ], False),
     # Farmer-submitted tree growth monitoring measurement (photo + calibration card).
     # GAS handler mirrors photos to TrueSightDAO/sunmint images/growth/, the GitHub Action
     # runs PM002 analysis and commits analysis.json; handler appends the measurement row
