@@ -96,7 +96,6 @@ ROUTING: list = [
         ("TREE_GROWTH_MONITORING", "processTreeGrowthMonitoringFromTelegramChatLogs"),
     ], False),
 ]
-]
 
 
 def _webhook_url(env_key: str) -> str:
