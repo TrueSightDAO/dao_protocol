@@ -66,11 +66,15 @@ def test_check_digital_signature_active(monkeypatch):
     monkeypatch.setattr(sigs, "find_by_public_key",
                         lambda pk: {"row": 5, "status": "ACTIVE",
                                     "name": "Gary Teh", "email": "gary@example.com"})
+    monkeypatch.setattr(dao, "_is_governor", lambda name: True)
+    monkeypatch.setattr(dao, "_is_sentinel", lambda name: False)
     r = client.get("/dao/check_digital_signature", params={"signature": "PUBKEY"})
     assert r.status_code == 200
     assert r.json() == {"registered": True,
                         "contributor_name": "Gary Teh",
-                        "contributor_email": "gary@example.com"}
+                        "contributor_email": "gary@example.com",
+                        "is_governor": True,
+                        "is_sentinel": False}
     assert r.headers.get("access-control-allow-origin") == "*"
 
 

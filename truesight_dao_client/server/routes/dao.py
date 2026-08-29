@@ -86,6 +86,29 @@ def _is_governor(contributor_name: str) -> bool:
     return False
 
 
+def _is_sentinel(contributor_name: str) -> bool:
+    """Check if a contributor is flagged 'Is Sentinel' (column W) on Contributors
+    contact information -- mirrors _resolve_sentinel_auth (client-facing gate)."""
+    if not contributor_name:
+        return False
+    try:
+        contact_prefix = sheets_base.quoted_prefix("Contributors contact information")
+        col_a = sheets_base.get_values(
+            _OFFCHAIN_ID, f"{contact_prefix}!A5:A", key_path=sigs._key(),
+        )
+        col_w = sheets_base.get_values(
+            _OFFCHAIN_ID, f"{contact_prefix}!W5:W", key_path=sigs._key(),
+        )
+        for i, row in enumerate(col_a):
+            if row and str(row[0]).strip().lower() == contributor_name.lower():
+                if i < len(col_w) and col_w[i] and str(col_w[i][0]).strip().upper() == "TRUE":
+                    return True
+                break
+    except Exception:
+        pass
+    return False
+
+
 def _resolve_governor_authority(verification_result: dict | None) -> str:
     """Determine column S (governor_authority) for Telegram Chat Logs.
 
@@ -325,9 +348,12 @@ async def check_digital_signature(signature: str = "") -> JSONResponse:
     except Exception as e:  # noqa: BLE001
         return JSONResponse({"registered": False, "error": str(e)}, status_code=500, headers=_ACAO)
     if record and record.get("status") == "ACTIVE":
+        name = record.get("name") or ""
         return JSONResponse({"registered": True,
-                             "contributor_name": record.get("name") or "",
-                             "contributor_email": record.get("email") or ""}, headers=_ACAO)
+                             "contributor_name": name,
+                             "contributor_email": record.get("email") or "",
+                             "is_governor": _is_governor(name),
+                             "is_sentinel": _is_sentinel(name)}, headers=_ACAO)
     if record and record.get("status") == "VERIFYING":
         return JSONResponse({"registered": False,
                              "pending_verification": True,
