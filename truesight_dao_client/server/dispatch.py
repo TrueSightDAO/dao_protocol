@@ -78,6 +78,9 @@ ROUTING: list = [
     # Handler (tokenomics process_tree_planting_link.js) has its own cron fallback + real governor
     # enforcement — this entry is purely a latency optimization, same as every other row here.
     # Spec: agentic_ai_context/plans/SUNMINT_TREE_QR_LINKING_PLAN.md (PR5).
+    ("[TREE PLANTING REJECT EVENT]", [
+        ("TREE_PLANTING_REJECT", "processTreePlantingLinksFromTelegramChatLogs"),
+    ], False),
     ("[TREE PLANTING LINK EVENT]", [
         ("TREE_PLANTING_LINK", "processTreePlantingLinksFromTelegramChatLogs"),
     ], False),
