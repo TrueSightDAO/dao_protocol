@@ -1,5 +1,5 @@
 """Port of Rails `Gdrive::TelegramRawLog.add_record` — append a signed submission to the
-**Telegram Chat Logs** tab (the DAO ledger intake). Append-only; never raises (returns bool).
+**Telegram Chat Logs** tab (the DAO ledger intake). Append-only; never raises (returns message_id str).
 
 Row layout (A:T, matches the Rails model + Sentinel extension):
   A update_id  B chatroom_id  C chatroom_name  D message_id  E "Edgar"  F ""  G contribution_made
@@ -32,13 +32,16 @@ def _unique_id() -> str:
 
 def add_record(contribution_made: str, chatroom_id: str = "-1002190388985",
                chatroom_name: str = "Edgar Direct", signature_verification: str | None = None,
-               governor_authority: str = "", is_sentinel: str = "") -> bool:
+               governor_authority: str = "", is_sentinel: str = "") -> str:
+    """Append a row; returns the generated message_id (col D) so callers can
+    reference it (e.g. ledger emit). Empty string on failure."""
     try:
+        message_id = _unique_id()
         row = [
             _unique_id(),            # A update_id
             chatroom_id,             # B
             chatroom_name,           # C
-            _unique_id(),            # D message_id
+            message_id,              # D message_id
             "Edgar",                 # E
             "",                      # F
             contribution_made,       # G
@@ -55,6 +58,6 @@ def add_record(contribution_made: str, chatroom_id: str = "-1002190388985",
             str(is_sentinel or ""),  # T
         ]
         base.append_row(SPREADSHEET_ID, f"{base.quoted_prefix(SHEET)}!A:T", row)
-        return True
+        return message_id
     except Exception:
-        return False
+        return ""

@@ -110,6 +110,12 @@ class Settings(BaseSettings):
     # Defaults to treasury-cache in the TrueSightDAO org.
     github_review_queue_repo: str = "TrueSightDAO/treasury-cache"
 
+    # GitHub repo + PAT for the public attestation ledger emit hook (A4).
+    # DAO_PROTOCOL_GITHUB_LEDGER_REPO / DAO_PROTOCOL_GITHUB_LEDGER_PAT (box .env).
+    # Falls back to github_pat when github_ledger_pat is empty.
+    github_ledger_repo: str = "TrueSightDAO/verify_public_signatures"
+    github_ledger_pat: str = ""
+
     # GAS webhook URL for review processing (DAO_PROTOCOL_GAS_REVIEW_WEBHOOK_URL).
     # Edgar calls GET <url>?exec=processApprovalRejections after a review event.
     gas_review_webhook_url: str = ""
