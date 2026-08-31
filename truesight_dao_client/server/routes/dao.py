@@ -431,10 +431,18 @@ async def submit_contribution(request: Request, background: BackgroundTasks) -> 
     is_sentinel = _resolve_sentinel_auth(
         verification_result if signature_verification == "success" else None
     )
-    telegram_raw_log.add_record(text or "[No Text Provided]",
-                                signature_verification=signature_verification,
-                                governor_authority=governor_authority,
-                                is_sentinel=is_sentinel)
+    message_id = telegram_raw_log.add_record(text or "[No Text Provided]",
+                                             signature_verification=signature_verification,
+                                             governor_authority=governor_authority,
+                                             is_sentinel=is_sentinel)
+
+    # --- public attestation ledger emit (A4; non-fatal, cron reconciles) ---
+    if signature_verification == "success" and verification_result and message_id:
+        try:
+            from ..services import ledger_emit
+            ledger_emit.emit(text, verification_result, message_id)
+        except Exception:
+            pass
 
     # --- attachment → GitHub upload (when text references a github.com blob/tree URL) ---
     file_uploaded = False
