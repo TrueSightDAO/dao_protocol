@@ -1,0 +1,732 @@
+{
+  "version": "2",
+  "description": "Canonical DAO event catalog — single source of truth for event types, labels, and validation. Served by Edgar at GET /events-catalog. Used by Sophia autopilot and server-side dispatch.",
+  "events": {
+    "CONTRIBUTION EVENT": {
+      "category": "Contribution & Finance",
+      "description": "Log time or USD contributions to receive TDG awards",
+      "canonical_labels": [
+        "Type",
+        "Amount",
+        "Description",
+        "Contributor(s)",
+        "TDG Issued"
+      ],
+      "required_fields": [
+        "Type",
+        "Amount"
+      ],
+      "dapp_page": "report_contribution.html"
+    },
+    "CAPITAL INJECTION EVENT": {
+      "category": "Contribution & Finance",
+      "description": "External investment into AGL contracts",
+      "canonical_labels": [
+        "Investor Name",
+        "Amount",
+        "Currency",
+        "Ledger",
+        "Description"
+      ],
+      "required_fields": [
+        "Ledger",
+        "Amount"
+      ],
+      "dapp_page": "report_capital_injection.html"
+    },
+    "CURRENCY CONVERSION EVENT": {
+      "category": "Contribution & Finance",
+      "description": "Multi-currency conversion between ledgers (e.g. USD→BRL via Wise)",
+      "canonical_labels": [
+        "Ledger",
+        "Ledger URL",
+        "Warehouse Manager",
+        "Source Currency",
+        "Source Amount",
+        "Target Currency",
+        "Target Amount",
+        "Implied Rate",
+        "Conversion Date",
+        "Description",
+        "Attached Filename",
+        "Destination Currency Conversion File Location"
+      ],
+      "required_fields": [
+        "Ledger",
+        "Warehouse Manager",
+        "Description"
+      ],
+      "dapp_page": "currency_conversion.html"
+    },
+    "VOTING RIGHTS WITHDRAWAL REQUEST": {
+      "category": "Contribution & Finance",
+      "description": "Request to cash out voting rights — signed by contributor, emitted as GitHub JSON for paper trail",
+      "canonical_labels": [
+        "Contributor",
+        "Amount to withdraw",
+        "Value per voting right",
+        "Expected total amount (USD)",
+        "Withdrawal method",
+        "PIX Key",
+        "PayLah Mobile",
+        "Venmo Number",
+        "PayPal ID",
+        "Zelle ID",
+        "WiseTransfer Email",
+        "WiseTransfer Full Name",
+        "WiseTransfer IBAN",
+        "WiseTransfer Account Number",
+        "WiseTransfer Bank Name",
+        "WiseTransfer Swift Code",
+        "Western Union First Name",
+        "Western Union Last Name",
+        "Western Union Country",
+        "Western Union City",
+        "Western Union State",
+        "Western Union Address",
+        "Western Union Postal Code",
+        "Western Union Phone Number",
+        "Western Union Email",
+        "Western Union Currency",
+        "Western Union Test Question",
+        "Western Union Test Answer",
+        "Submission Source"
+      ],
+      "required_fields": [
+        "Amount to withdraw"
+      ],
+      "dapp_page": "withdraw_voting_rights.html"
+    },
+    "VOTING RIGHTS WITHDRAWAL SETTLEMENT EVENT": {
+      "category": "Contribution & Finance",
+      "description": "Governor-signed settlement of a voting rights cash-out — deducts TDG from Ledger history, deducts USD from offchain provisions, writes GitHub JSON paper trail",
+      "canonical_labels": [
+        "Cash-Out Request ID",
+        "Contributor",
+        "Voting Rights Withdrawn (TDG)",
+        "Amount Paid (USD)",
+        "Payment Reference",
+        "Payment Method Used",
+        "Settlement Date",
+        "Governor",
+        "Notes",
+        "Proof Attachment URL",
+        "Submission Source"
+      ],
+      "required_fields": [
+        "Contributor",
+        "Voting Rights Withdrawn (TDG)",
+        "Amount Paid (USD)",
+        "Settlement Date"
+      ],
+      "dapp_page": "withdraw_voting_rights_settlement.html"
+    },
+    "INVENTORY MOVEMENT": {
+      "category": "Inventory & Supply Chain",
+      "description": "Track inventory between managers/locations",
+      "canonical_labels": [
+        "Manager Name",
+        "Recipient Name",
+        "Inventory Item",
+        "QR Code",
+        "Quantity",
+        "Latitude",
+        "Longitude",
+        "Attached Filename",
+        "Destination Inventory File Location",
+        "Submission Source"
+      ],
+      "required_fields": [
+        "Manager Name",
+        "Recipient Name"
+      ],
+      "dapp_page": "report_inventory_movement.html"
+    },
+    "SALES EVENT": {
+      "category": "Inventory & Supply Chain",
+      "description": "Record a QR-coded product sale",
+      "canonical_labels": [
+        "Item",
+        "Sales price",
+        "Sold by",
+        "Cash proceeds collected by",
+        "Owner email",
+        "Stripe Session ID",
+        "Shipping Provider",
+        "Tracking number",
+        "Attached Filename",
+        "Submission Source"
+      ],
+      "required_fields": [
+        "Item",
+        "Sales price",
+        "Sold by"
+      ],
+      "dapp_page": "report_sales.html"
+    },
+    "REPACKAGING BATCH EVENT": {
+      "category": "Inventory & Supply Chain",
+      "description": "Record repackaging of bulk inventory into smaller units",
+      "canonical_labels": [
+        "Input SKU",
+        "Output SKU",
+        "Quantity",
+        "Location"
+      ],
+      "required_fields": [
+        "Input SKU",
+        "Output SKU",
+        "Quantity"
+      ],
+      "dapp_page": "repackaging_planner.html"
+    },
+    "REPACKAGING SETTLEMENT EVENT": {
+      "category": "Inventory & Supply Chain",
+      "description": "Settle a repackaging batch — populate offchain asset location + Currencies metadata after repackaging",
+      "canonical_labels": [
+        "Composition URL",
+        "Holder Name",
+        "Farm Name",
+        "State",
+        "Country",
+        "Year",
+        "Landing Page",
+        "Ledger URL",
+        "SKU Mapping",
+        "Deplete Inputs",
+        "Add Output Locations",
+        "Set Currencies Metadata",
+        "Rebuild Inventory",
+        "Submission Source"
+      ],
+      "required_fields": [
+        "Composition URL",
+        "Holder Name"
+      ],
+      "dapp_page": "repackaging_settlement.html"
+    },
+    "ASSET RECEIPT EVENT": {
+      "category": "Inventory & Supply Chain",
+      "description": "Record receipt of a physical DAO asset",
+      "canonical_labels": [
+        "Currency",
+        "Amount",
+        "Description",
+        "Fund Handler",
+        "Attached Filename",
+        "Destination Contribution File Location"
+      ],
+      "required_fields": [
+        "Currency",
+        "Amount",
+        "Fund Handler"
+      ],
+      "dapp_page": "report_asset_receipt.html"
+    },
+    "DAO Inventory Expense Event": {
+      "category": "Inventory & Supply Chain",
+      "description": "Record DAO operational expenses",
+      "canonical_labels": [
+        "DAO Member Name",
+        "Target Ledger",
+        "Latitude",
+        "Longitude",
+        "Inventory Type",
+        "Inventory Quantity",
+        "Description",
+        "Attached Filename",
+        "Destination Expense File Location",
+        "Submission Source"
+      ],
+      "required_fields": [
+        "Inventory Type",
+        "Inventory Quantity",
+        "DAO Member Name"
+      ],
+      "dapp_page": "report_dao_expenses.html"
+    },
+    "QR CODE EVENT": {
+      "category": "QR Code Operations",
+      "description": "Scan/register a QR code",
+      "canonical_labels": [
+        "QR Code",
+        "Action",
+        "Location",
+        "Attached Filename",
+        "Submission Source"
+      ],
+      "required_fields": [
+        "QR Code"
+      ],
+      "dapp_page": "scanner.html"
+    },
+    "QR CODE UPDATE EVENT": {
+      "category": "QR Code Operations",
+      "description": "Update QR code metadata (status, email, manager name). NOTE: the GAS regex expects 'Associated Member' (with 'd') — the DApp UI label 'Associate Member' does NOT match. Always use 'Associated Member' in submissions.",
+      "canonical_labels": [
+        "QR Code",
+        "Associated Member",
+        "New Status",
+        "New Email",
+        "Stripe Session ID",
+        "Shipping Provider",
+        "Tracking Number"
+      ],
+      "required_fields": [
+        "QR Code"
+      ],
+      "dapp_page": "update_qr_code.html"
+    },
+    "TREE PLANTING LINK EVENT": {
+      "category": "QR Code Operations",
+      "description": "Governor-only. Links a Sunmint tree-planting submission (SunMint Tree Planting sheet, status NEW) to a sold Agroverse QR code (status SOLD) — flips the QR to ASSIGNED_TO_TREE, copies planting evidence, books the ledger fulfillment entry, and notifies the QR owner. Rejected server-side (GAS Governors tab check) if the signer isn't a governor.",
+      "canonical_labels": [
+        "QR Code",
+        "SunMint Submission Message ID",
+        "Updated by",
+        "Submission Source"
+      ],
+      "required_fields": [
+        "QR Code",
+        "SunMint Submission Message ID"
+      ],
+      "dapp_page": "link_tree_planting.html"
+    },
+    "BATCH QR CODE REQUEST": {
+      "category": "QR Code Operations",
+      "description": "Request batch QR code generation",
+      "canonical_labels": [
+        "Quantity",
+        "Prefix",
+        "Product"
+      ],
+      "required_fields": [
+        "Quantity",
+        "Prefix"
+      ],
+      "dapp_page": "batch_qr_generator.html"
+    },
+    "DONATION MINT EVENT": {
+      "category": "QR Code Operations",
+      "description": "Mint a donation pledge QR code",
+      "canonical_labels": [
+        "QR Code",
+        "Currency",
+        "Donation Amount",
+        "Donor Name",
+        "Donor Email",
+        "Landing Page",
+        "Notes",
+        "Attached Filename",
+        "Destination Contribution File Location"
+      ],
+      "required_fields": [
+        "QR Code",
+        "Currency",
+        "Donation Amount",
+        "Donor Name"
+      ],
+      "dapp_page": "mint_donation.html"
+    },
+    "PROPOSAL CREATION": {
+      "category": "Governance",
+      "description": "Submit a new DAO proposal for community voting",
+      "canonical_labels": [
+        "Title",
+        "Description",
+        "Options",
+        "Deadline"
+      ],
+      "required_fields": [
+        "Title",
+        "Description"
+      ],
+      "dapp_page": "create_proposal.html"
+    },
+    "PROPOSAL VOTE": {
+      "category": "Governance",
+      "description": "Cast a vote on a DAO proposal",
+      "canonical_labels": [
+        "Proposal ID",
+        "Vote",
+        "Rationale"
+      ],
+      "required_fields": [
+        "Proposal ID",
+        "Vote"
+      ],
+      "dapp_page": "review_proposal.html"
+    },
+    "DAPP PERMISSION CHANGE EVENT": {
+      "category": "Governance",
+      "description": "Governor-signed permission matrix edits",
+      "canonical_labels": [
+        "Action",
+        "Target",
+        "Permission"
+      ],
+      "required_fields": [
+        "Action",
+        "Target"
+      ],
+      "dapp_page": "governor_permissions.html"
+    },
+    "EMAIL REGISTERED EVENT": {
+      "category": "Credentialing & Identity",
+      "description": "Begin key registration with an email address",
+      "canonical_labels": [
+        "Email",
+        "Generation Source URL"
+      ],
+      "required_fields": [
+        "Email"
+      ],
+      "dapp_page": "create_signature.html"
+    },
+    "EMAIL VERIFICATION EVENT": {
+      "category": "Credentialing & Identity",
+      "description": "Complete key registration via verification link",
+      "canonical_labels": [
+        "Verification Key",
+        "Email"
+      ],
+      "required_fields": [
+        "Verification Key",
+        "Email"
+      ],
+      "dapp_page": "create_signature.html"
+    },
+    "CONTRIBUTOR ADD EVENT": {
+      "category": "Credentialing & Identity",
+      "description": "Add a new DAO contributor with name and email",
+      "canonical_labels": [
+        "Contributor Name",
+        "Contributor Email",
+        "Initial Digital Signature",
+        "Submitted At",
+        "Submission Source"
+      ],
+      "required_fields": [
+        "Contributor Name",
+        "Contributor Email"
+      ],
+      "dapp_page": "governor_contributor_admin.html"
+    },
+    "CREDENTIALING ATTESTATION EVENT": {
+      "category": "Credentialing & Identity",
+      "description": "Issue a lineage credential (e.g. program completion)",
+      "canonical_labels": [
+        "Program",
+        "Attestation Type",
+        "Attestor Public Key",
+        "Attestor Name",
+        "Attestee Public Key",
+        "Attestee Name",
+        "Captured At",
+        "Program Year",
+        "Roster Source URL",
+        "Roster Source Row",
+        "Config URL",
+        "Schema URL",
+        "Source URL",
+        "Payload JSON"
+      ],
+      "required_fields": [
+        "Program",
+        "Attestation Type",
+        "Attestor Public Key",
+        "Attestee Public Key"
+      ],
+      "dapp_page": "butterfly-effect-club.truesight.me"
+    },
+    "CREDENTIALING QUALIFICATION EVENT": {
+      "category": "Credentialing & Identity",
+      "description": "Admission credential for live-cohort students (two-event split: admission → completion)",
+      "canonical_labels": [
+        "Program",
+        "Attestation Type",
+        "Attestor Public Key",
+        "Attestor Name",
+        "Attestee Public Key",
+        "Attestee Name",
+        "Captured At",
+        "Program Year",
+        "Source URL",
+        "Payload JSON"
+      ],
+      "required_fields": [
+        "Program",
+        "Attestation Type"
+      ],
+      "dapp_page": "butterfly-effect-club.truesight.me (planned)"
+    },
+    "PRACTICE EVENT": {
+      "category": "Credentialing & Identity",
+      "description": "Log a capoeira training session — COPPA-compliant: anonymous keypair, no email required",
+      "canonical_labels": [
+        "Program",
+        "Practice Type",
+        "Practitioner Public Key",
+        "Practitioner Name",
+        "Captured At",
+        "Source URL",
+        "Payload JSON"
+      ],
+      "required_fields": [
+        "Program",
+        "Practice Type",
+        "Practitioner Public Key"
+      ],
+      "dapp_page": "capoeira.agroverse.shop/practice.html"
+    },
+    "RETAIL FIELD REPORT EVENT": {
+      "category": "Outreach & Field Reports",
+      "description": "Log a store visit/update — status changes, remarks, contact info",
+      "canonical_labels": [
+        "Shop Name",
+        "Store Key",
+        "Update ID",
+        "New Status",
+        "Previous Status",
+        "Shop Type",
+        "Owner Name",
+        "Contact Person",
+        "Email",
+        "Phone",
+        "Cell Phone",
+        "Website",
+        "Instagram",
+        "Visit Date",
+        "Contact Date",
+        "Follow Up Date",
+        "Contact Method",
+        "Remarks"
+      ],
+      "required_fields": [
+        "Shop Name",
+        "Remarks"
+      ],
+      "dapp_page": "store_interaction_history.html"
+    },
+    "STORE ADD EVENT": {
+      "category": "Outreach & Field Reports",
+      "description": "Add a new store to the holistic wellness Hit List",
+      "canonical_labels": [
+        "Shop Name",
+        "Status",
+        "Shop Type",
+        "Address",
+        "City",
+        "State",
+        "Country",
+        "Website",
+        "Instagram",
+        "Phone",
+        "Cell Phone",
+        "Email",
+        "Owner Name",
+        "Contact Person",
+        "Referred By",
+        "Notes"
+      ],
+      "required_fields": [
+        "Shop Name",
+        "Address"
+      ],
+      "dapp_page": "stores_nearby.html (Add Store form)"
+    },
+    "PARTNER CHECK-IN EVENT": {
+      "category": "Outreach & Field Reports",
+      "description": "Log periodic check-in with retail partners — stock status, restock needs",
+      "canonical_labels": [
+        "Partner ID",
+        "Contributor Name",
+        "Check-in Date",
+        "Method",
+        "Stock Status",
+        "Restock Needed",
+        "Restock SKU",
+        "Restock Quantity",
+        "Next Check-in Date",
+        "Notes",
+        "Update ID"
+      ],
+      "required_fields": [
+        "Partner ID",
+        "Contributor Name"
+      ],
+      "dapp_page": "partner_check_in.html"
+    },
+    "PARTNER ADD EVENT": {
+      "category": "Outreach & Field Reports",
+      "description": "Onboard a new retail partner to the DAO Partners sheet",
+      "canonical_labels": [
+        "Partner Name",
+        "Email",
+        "Address",
+        "Type",
+        "Website",
+        "About",
+        "Governor Name"
+      ],
+      "required_fields": [
+        "Partner Name",
+        "Email",
+        "Type"
+      ],
+      "dapp_page": "partner_add.html"
+    },
+    "WARMUP SEND EVENT": {
+      "category": "Outreach & Field Reports",
+      "description": "Send a warm-up email draft from Gmail",
+      "canonical_labels": [
+        "Draft ID",
+        "Recipient",
+        "Campaign"
+      ],
+      "required_fields": [
+        "Draft ID"
+      ],
+      "dapp_page": "warmup_review.html"
+    },
+    "NOTARIZATION EVENT": {
+      "category": "Other",
+      "description": "Notarize a supply chain document",
+      "canonical_labels": [
+        "Document Hash",
+        "Description",
+        "Witnesses"
+      ],
+      "required_fields": [
+        "Document Hash"
+      ],
+      "dapp_page": "notarize.html"
+    },
+    "TREE PLANTING EVENT": {
+      "category": "Other",
+      "description": "Record a tree planting with photo and location",
+      "canonical_labels": [
+        "Tree Count",
+        "Location",
+        "Species",
+        "Planter",
+        "Attached Filename",
+        "Submission Source"
+      ],
+      "required_fields": [
+        "Tree Count",
+        "Location"
+      ],
+      "dapp_page": "report_tree_planting.html"
+    },
+    "TREE GROWTH MONITORING EVENT": {
+      "category": "QR Code Operations",
+      "description": "Farmer-submitted tree growth measurement (photo of calibration card against trunk at breast height + context photo). Client RSA-2048 signed, POSTed to Edgar; GAS mirrors photos to TrueSightDAO/sunmint images/growth/, the GitHub Action runs PM002 analysis and commits analysis.json, and the handler appends the measurement row (Tree Growth Measurements tab), writes per-tree JSON history, and logs to Telegram Chat Logs. Photos + analysis commit URL are carried on the event for VVB audit.",
+      "canonical_labels": [
+        "Tree ID",
+        "Species",
+        "DBH (cm)",
+        "Latitude",
+        "Longitude",
+        "Measurement Time",
+        "Close-up Photo URL",
+        "Context Photo URL",
+        "Analysis Commit URL",
+        "Nearby Trees",
+        "Submission Source"
+      ],
+      "required_fields": [
+        "Tree ID",
+        "DBH (cm)"
+      ],
+      "dapp_page": "monitor_tree_growth.html"
+    },
+    "FARM REGISTRATION EVENT": {
+      "category": "Other",
+      "description": "Register a farm for tree planting and carbon credit programs",
+      "canonical_labels": [
+        "Farm Name",
+        "Location",
+        "Owner",
+        "Acreage"
+      ],
+      "required_fields": [
+        "Farm Name",
+        "Location"
+      ],
+      "dapp_page": "register_farm.html"
+    },
+    "FARM BOUNDARY EVIDENCE EVENT": {
+      "category": "Other",
+      "description": "Farmer-submitted geotagged boundary evidence (photos/videos of plot boundary markers, e.g. the pillar-and-log walk). GPS embedded in the images is extracted (exiftool), the convex hull forms the approx boundary polygon, and the backend creates/updates the farm + plot record (SunMint Farms sheet -> plots/index.geojson -> impact map).",
+      "canonical_labels": [
+        "Farm Name",
+        "Plot ID",
+        "Boundary Type",
+        "Media URLs",
+        "Extracted GPS",
+        "Area Hectares",
+        "Submission Source"
+      ],
+      "required_fields": [
+        "Farm Name",
+        "Media URLs"
+      ],
+      "dapp_page": "limites-da-fazenda/index.html"
+    },
+    "PRODUCT REGISTRATION EVENT": {
+      "category": "Inventory & Supply Chain",
+      "description": "Register a new product SKU in the Agroverse SKUs sheet",
+      "canonical_labels": [
+        "Product ID",
+        "Product Name",
+        "Price",
+        "Category",
+        "Weight",
+        "Image Path",
+        "GTIN"
+      ],
+      "required_fields": [
+        "Product ID",
+        "Product Name",
+        "Price"
+      ],
+      "dapp_page": "create_signature.html"
+    },
+    "DESIGN UPLOAD EVENT": {
+      "category": "Inventory & Supply Chain",
+      "description": "Upload white-label chocolate bar artwork (4in x 2in at 300 DPI)",
+      "canonical_labels": [
+        "Email",
+        "Design ID",
+        "Filename",
+        "Dimensions",
+        "Attached Filename",
+        "Destination Design File Location"
+      ],
+      "required_fields": [
+        "Email",
+        "Design ID",
+        "Filename"
+      ],
+      "dapp_page": "agroverse.shop/white-label/"
+    },
+    "DESIGN ORDER EVENT": {
+      "category": "Inventory & Supply Chain",
+      "description": "Place an order for white-label chocolate bars with a selected design",
+      "canonical_labels": [
+        "Email",
+        "Design ID",
+        "Quantity",
+        "SKU",
+        "Unit Price"
+      ],
+      "required_fields": [
+        "Email",
+        "Design ID",
+        "Quantity"
+      ],
+      "dapp_page": "agroverse.shop/white-label/"
+    }
+  }
+}
