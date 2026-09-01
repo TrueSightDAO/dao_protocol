@@ -1,1 +1,573 @@
-PLACEHOLDER - replaced same turn
+{
+  "version": 3,
+  "description": "TrueSight DAO event catalog (served by Edgar at /events-catalog)",
+  "events": {
+    "ASSET RECEIPT EVENT": {
+      "category": "Inventory",
+      "description": "Receipt of physical assets into DAO inventory (e.g. a cacao shipment from a partner). Creates a ledger line crediting the inventory account for the asset.",
+      "canonical_labels": [
+        "Item",
+        "Quantity",
+        "From",
+        "Received By",
+        "Date"
+      ],
+      "required_fields": [
+        "Item",
+        "Quantity",
+        "Received By"
+      ],
+      "dapp_page": null
+    },
+    "BATCH QR CODE REQUEST": {
+      "category": "QR Code",
+      "description": "Request a batch of QR codes to be minted.",
+      "canonical_labels": [
+        "Quantity",
+        "Item",
+        "Manager"
+      ],
+      "required_fields": [
+        "Quantity",
+        "Item"
+      ],
+      "dapp_page": null
+    },
+    "CAPITAL INJECTION EVENT": {
+      "category": "Capital",
+      "description": "Capital injection into the DAO treasury.",
+      "canonical_labels": [
+        "Amount",
+        "Source",
+        "Date"
+      ],
+      "required_fields": [
+        "Amount",
+        "Source"
+      ],
+      "dapp_page": null
+    },
+    "CONTRIBUTION EVENT": {
+      "category": "Contribution",
+      "description": "Record a contributor's time or value-add work for the DAO.",
+      "canonical_labels": [
+        "Type",
+        "Amount",
+        "Contributor",
+        "Description"
+      ],
+      "required_fields": [
+        "Type",
+        "Amount",
+        "Contributor"
+      ],
+      "dapp_page": null
+    },
+    "CONTRIBUTOR ADD EVENT": {
+      "category": "Contributor",
+      "description": "Onboard a new contributor to the DAO.",
+      "canonical_labels": [
+        "Contributor Name",
+        "Contributor Email",
+        "Role"
+      ],
+      "required_fields": [
+        "Contributor Name",
+        "Contributor Email"
+      ],
+      "dapp_page": null
+    },
+    "CREDENTIALING ATTESTATION EVENT": {
+      "category": "Credentialing",
+      "description": "An attestation of a claim for credentialing purposes.",
+      "canonical_labels": [
+        "Claim",
+        "Attester",
+        "Date"
+      ],
+      "required_fields": [
+        "Claim",
+        "Attester"
+      ],
+      "dapp_page": null
+    },
+    "CREDENTIALING QUALIFICATION EVENT": {
+      "category": "Credentialing",
+      "description": "Qualification of a candidate for a credential.",
+      "canonical_labels": [
+        "Candidate",
+        "Qualification",
+        "Date"
+      ],
+      "required_fields": [
+        "Candidate",
+        "Qualification"
+      ],
+      "dapp_page": null
+    },
+    "CURRENCY CONVERSION EVENT": {
+      "category": "Finance",
+      "description": "Convert one currency to another in the DAO books.",
+      "canonical_labels": [
+        "From",
+        "To",
+        "Amount",
+        "Rate"
+      ],
+      "required_fields": [
+        "From",
+        "To",
+        "Amount"
+      ],
+      "dapp_page": null
+    },
+    "DAO Inventory Expense Event": {
+      "category": "Inventory",
+      "description": "Expense against DAO inventory.",
+      "canonical_labels": [
+        "Item",
+        "Amount",
+        "Description"
+      ],
+      "required_fields": [
+        "Item",
+        "Amount"
+      ],
+      "dapp_page": null
+    },
+    "DAPP PERMISSION CHANGE EVENT": {
+      "category": "Governance",
+      "description": "Change a dapp permission.",
+      "canonical_labels": [
+        "Actor",
+        "Permission",
+        "Change"
+      ],
+      "required_fields": [
+        "Actor",
+        "Permission"
+      ],
+      "dapp_page": null
+    },
+    "DESIGN ORDER EVENT": {
+      "category": "Commerce",
+      "description": "A design order placed.",
+      "canonical_labels": [
+        "Design",
+        "Quantity",
+        "Buyer"
+      ],
+      "required_fields": [
+        "Design",
+        "Quantity"
+      ],
+      "dapp_page": null
+    },
+    "DESIGN UPLOAD EVENT": {
+      "category": "Commerce",
+      "description": "A design uploaded to the marketplace.",
+      "canonical_labels": [
+        "Design",
+        "Artist",
+        "File URL"
+      ],
+      "required_fields": [
+        "Design",
+        "Artist"
+      ],
+      "dapp_page": null
+    },
+    "DONATION MINT EVENT": {
+      "category": "Token",
+      "description": "Mint tokens for a donation.",
+      "canonical_labels": [
+        "Donor",
+        "Amount",
+        "Token"
+      ],
+      "required_fields": [
+        "Donor",
+        "Amount"
+      ],
+      "dapp_page": null
+    },
+    "EMAIL REGISTERED EVENT": {
+      "category": "Identity",
+      "description": "A user registered an email with the DAO (creates/reuses digital signature).",
+      "canonical_labels": [
+        "Email",
+        "Public Key",
+        "Device"
+      ],
+      "required_fields": [
+        "Email"
+      ],
+      "dapp_page": null
+    },
+    "EMAIL VERIFICATION EVENT": {
+      "category": "Identity",
+      "description": "A user verified their email with the DAO.",
+      "canonical_labels": [
+        "Email",
+        "Verified"
+      ],
+      "required_fields": [
+        "Email"
+      ],
+      "dapp_page": null
+    },
+    "FARM BOUNDARY EVIDENCE EVENT": {
+      "category": "Other",
+      "description": "Farmer-submitted geotagged boundary evidence (photos/videos of plot boundary markers, e.g. the pillar-and-log walk). GPS embedded in the images is extracted (exiftool), the convex hull forms the approx boundary polygon, and the backend creates/updates the farm + plot record (SunMint Farms sheet -> plots/index.geojson -> impact map).",
+      "canonical_labels": [
+        "Farm Name",
+        "Plot ID",
+        "Boundary Type",
+        "Media URLs",
+        "Extracted GPS",
+        "Area Hectares",
+        "Submission Source"
+      ],
+      "required_fields": [
+        "Farm Name",
+        "Media URLs"
+      ],
+      "dapp_page": "limites-da-fazenda/index.html"
+    },
+    "FARM REGISTRATION EVENT": {
+      "category": "Farm",
+      "description": "Register a new farm with the SunMint program.",
+      "canonical_labels": [
+        "Farm Name",
+        "Owner",
+        "Location"
+      ],
+      "required_fields": [
+        "Farm Name",
+        "Owner"
+      ],
+      "dapp_page": "register_farm/index.html"
+    },
+    "INVENTORY MOVEMENT": {
+      "category": "Inventory",
+      "description": "Move inventory between known supply-chain holders (manager -> recipient). QR status stays IN INVENTORY.",
+      "canonical_labels": [
+        "Manager Name",
+        "Recipient Name",
+        "QR Code",
+        "Quantity",
+        "Destination inventory file location"
+      ],
+      "required_fields": [
+        "Manager Name",
+        "Recipient Name",
+        "QR Code",
+        "Quantity"
+      ],
+      "dapp_page": null
+    },
+    "NOTARIZATION EVENT": {
+      "category": "Governance",
+      "description": "Notarize a document or claim.",
+      "canonical_labels": [
+        "Document",
+        "Notary",
+        "Date"
+      ],
+      "required_fields": [
+        "Document",
+        "Notary"
+      ],
+      "dapp_page": null
+    },
+    "PARTNER ADD EVENT": {
+      "category": "Partner",
+      "description": "Onboard a new partner to the DAO.",
+      "canonical_labels": [
+        "Partner Name",
+        "Partner Email",
+        "Partner Type"
+      ],
+      "required_fields": [
+        "Partner Name",
+        "Partner Email"
+      ],
+      "dapp_page": null
+    },
+    "PARTNER CHECK-IN EVENT": {
+      "category": "Partner",
+      "description": "Check in with an existing partner.",
+      "canonical_labels": [
+        "Partner Name",
+        "Check-in Date",
+        "Notes"
+      ],
+      "required_fields": [
+        "Partner Name",
+        "Check-in Date"
+      ],
+      "dapp_page": null
+    },
+    "PRACTICE EVENT": {
+      "category": "Credentialing",
+      "description": "A practice event (e.g. daily oracle grounding ritual).",
+      "canonical_labels": [
+        "Practice",
+        "Practitioner",
+        "Date"
+      ],
+      "required_fields": [
+        "Practice",
+        "Practitioner"
+      ],
+      "dapp_page": null
+    },
+    "PRODUCT REGISTRATION EVENT": {
+      "category": "Commerce",
+      "description": "Register a new product with the DAO.",
+      "canonical_labels": [
+        "Product",
+        "SKU",
+        "Price"
+      ],
+      "required_fields": [
+        "Product",
+        "SKU"
+      ],
+      "dapp_page": null
+    },
+    "PROPOSAL CREATION": {
+      "category": "Governance",
+      "description": "Create a governance proposal.",
+      "canonical_labels": [
+        "Title",
+        "Author",
+        "Body"
+      ],
+      "required_fields": [
+        "Title",
+        "Author"
+      ],
+      "dapp_page": null
+    },
+    "PROPOSAL VOTE": {
+      "category": "Governance",
+      "description": "Cast a vote on a governance proposal.",
+      "canonical_labels": [
+        "Proposal",
+        "Voter",
+        "Vote"
+      ],
+      "required_fields": [
+        "Proposal",
+        "Voter"
+      ],
+      "dapp_page": null
+    },
+    "QR CODE EVENT": {
+      "category": "QR Code",
+      "description": "A QR code lifecycle event.",
+      "canonical_labels": [
+        "QR Code",
+        "Event",
+        "Details"
+      ],
+      "required_fields": [
+        "QR Code",
+        "Event"
+      ],
+      "dapp_page": null
+    },
+    "QR CODE UPDATE EVENT": {
+      "category": "QR Code",
+      "description": "Update metadata on an existing QR code.",
+      "canonical_labels": [
+        "QR Code",
+        "Field",
+        "Value"
+      ],
+      "required_fields": [
+        "QR Code",
+        "Field"
+      ],
+      "dapp_page": null
+    },
+    "REPACKAGING BATCH EVENT": {
+      "category": "Inventory",
+      "description": "Create a repackaging batch.",
+      "canonical_labels": [
+        "Batch",
+        "Item",
+        "Quantity"
+      ],
+      "required_fields": [
+        "Batch",
+        "Item"
+      ],
+      "dapp_page": null
+    },
+    "REPACKAGING SETTLEMENT EVENT": {
+      "category": "Inventory",
+      "description": "Settle a repackaging batch.",
+      "canonical_labels": [
+        "Batch",
+        "Settled By",
+        "Date"
+      ],
+      "required_fields": [
+        "Batch",
+        "Settled By"
+      ],
+      "dapp_page": null
+    },
+    "RETAIL FIELD REPORT EVENT": {
+      "category": "Retail",
+      "description": "Field report from a retail location.",
+      "canonical_labels": [
+        "Store",
+        "Report",
+        "Date"
+      ],
+      "required_fields": [
+        "Store",
+        "Report"
+      ],
+      "dapp_page": null
+    },
+    "SALES EVENT": {
+      "category": "Sales",
+      "description": "A bag sold to an end customer (retail). QR status becomes SOLD.",
+      "canonical_labels": [
+        "Cash proceeds collected by",
+        "Owner email",
+        "Sales price",
+        "Item",
+        "Sold by"
+      ],
+      "required_fields": [
+        "Item",
+        "Owner email",
+        "Sales price"
+      ],
+      "dapp_page": null
+    },
+    "STORE ADD EVENT": {
+      "category": "Retail",
+      "description": "Add a retail store.",
+      "canonical_labels": [
+        "Store Name",
+        "Location",
+        "Contact"
+      ],
+      "required_fields": [
+        "Store Name",
+        "Location"
+      ],
+      "dapp_page": null
+    },
+    "TREE GROWTH MONITORING EVENT": {
+      "category": "Farm",
+      "description": "Farmer-submitted tree growth monitoring photos.",
+      "canonical_labels": [
+        "Plot ID",
+        "Media URLs",
+        "Submitted At"
+      ],
+      "required_fields": [
+        "Plot ID",
+        "Media URLs"
+      ],
+      "dapp_page": "monitor-tree-growth/index.html"
+    },
+    "TREE PLANTING EVENT": {
+      "category": "Farm",
+      "description": "A tree planted at a geo-located position.",
+      "canonical_labels": [
+        "Tree ID",
+        "Latitude",
+        "Longitude",
+        "Species"
+      ],
+      "required_fields": [
+        "Tree ID",
+        "Latitude",
+        "Longitude"
+      ],
+      "dapp_page": null
+    },
+    "TREE PLANTING LINK EVENT": {
+      "category": "Farm",
+      "description": "A tree planting link event.",
+      "canonical_labels": [
+        "Link",
+        "Planter",
+        "Date"
+      ],
+      "required_fields": [
+        "Link",
+        "Planter"
+      ],
+      "dapp_page": null
+    },
+    "VOTING RIGHTS WITHDRAWAL REQUEST": {
+      "category": "Governance",
+      "description": "Request to withdraw voting rights.",
+      "canonical_labels": [
+        "Member",
+        "Amount",
+        "Date"
+      ],
+      "required_fields": [
+        "Member",
+        "Amount"
+      ],
+      "dapp_page": null
+    },
+    "VOTING RIGHTS WITHDRAWAL SETTLEMENT EVENT": {
+      "category": "Governance",
+      "description": "Settle a voting rights withdrawal.",
+      "canonical_labels": [
+        "Member",
+        "Amount",
+        "Date"
+      ],
+      "required_fields": [
+        "Member",
+        "Amount"
+      ],
+      "dapp_page": null
+    },
+    "WARMUP SEND EVENT": {
+      "category": "Marketing",
+      "description": "A warm-up email sent to a lead.",
+      "canonical_labels": [
+        "Lead",
+        "Template",
+        "Sent At"
+      ],
+      "required_fields": [
+        "Lead",
+        "Template"
+      ],
+      "dapp_page": null
+    },
+    "MEDIA RETRACTION EVENT": {
+      "category": "Other",
+      "description": "Invalidate/retract one or more boundary media submissions (soft-delete: keeps the row, adds invalidated_at/by/reason/source, drops the item out of polygon computation). Triggers a recalculation of the plot polygon (re-run convex hull on remaining GPS points) and regeneration of plots/index.geojson. Three-tier retraction model: submitting farmer/farm lead (own submissions), governor (anything by default), or Sentinel (automated, on satellite-contradiction evidence). See plans/SUNMINT_MEDIA_INVALIDATION_DESIGN.md.",
+      "canonical_labels": [
+        "Plot ID",
+        "Media URLs",
+        "Reason",
+        "Retractor Email",
+        "Retraction Source"
+      ],
+      "required_fields": [
+        "Plot ID",
+        "Media URLs",
+        "Reason",
+        "Retractor Email"
+      ],
+      "dapp_page": "limites-da-fazenda/index.html"
+    }
+  }
+}
