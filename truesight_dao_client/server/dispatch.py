@@ -234,6 +234,20 @@ ROUTING: list = [
         ],
         False,
     ),
+    # MEDIA RETRACTION EVENT - invalidate boundary media (3-tier: farmer/lead, governor, sentinel).
+    # Soft-invalidate: keep the row, set invalidated_at/by/reason/source, drop the item's GPS from
+    # the convex hull, recalculate the plot polygon, regenerate plots/index.geojson.
+    # See plans/SUNMINT_MEDIA_INVALIDATION_DESIGN.md (agentic_ai_context).
+    (
+        "[MEDIA RETRACTION EVENT]",
+        [
+            (
+                "MEDIA_RETRACTION",
+                "processMediaRetractionFromTelegramChatLogs",
+            ),
+        ],
+        False,
+    ),
 ]
 
 
