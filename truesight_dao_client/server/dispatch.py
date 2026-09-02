@@ -248,6 +248,20 @@ ROUTING: list = [
         ],
         False,
     ),
+    # PLOT INVALIDATION EVENT - mark a PLOT invalid (governor/sentinel ONLY, strict allowlist gate
+    # enforced server-side in the GAS handler). Sets Plots row Status -> invalid + invalidated_by/
+    # reason/at columns, pings plots-index rebuild so the plot vanishes from plots/index.geojson +
+    # dropdown. See plans/SUNMINT_PLOT_FIRST_MODEL.md (agentic_ai_context).
+    (
+        "[PLOT INVALIDATION EVENT]",
+        [
+            (
+                "PLOT_INVALIDATION",
+                "processPlotInvalidationFromTelegramChatLogs",
+            ),
+        ],
+        False,
+    ),
 ]
 
 
