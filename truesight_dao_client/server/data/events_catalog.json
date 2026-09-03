@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "description": "Canonical DAO event catalog — single source of truth for event types, labels, and validation. Served by Edgar at GET /events-catalog. Used by Sophia autopilot and server-side dispatch.",
   "events": {
     "ASSET RECEIPT EVENT": {
@@ -274,12 +274,15 @@
     },
     "FARM BOUNDARY EVIDENCE EVENT": {
       "category": "Other",
-      "description": "Farmer-submitted geotagged boundary evidence (photos/videos of plot boundary markers, e.g. the pillar-and-log walk). GPS embedded in the images is extracted (exiftool), the convex hull forms the approx boundary polygon, and the backend creates/updates the farm + plot record (SunMint Farms sheet -> plots/index.geojson -> impact map).",
+      "description": "Farmer/agent-submitted geotagged boundary evidence (photos/videos of plot boundary markers). GPS embedded in the images is extracted (exiftool); the convex hull forms the approx boundary polygon; the backend creates/updates the farm + plot record (SunMint Farms sheet -> plots/index.geojson -> impact map). CONTRACT: omit Plot ID when unknown - the backend auto-assigns PL-###; NEVER send an empty '- Plot ID:' line (the GAS parser regex swallows the newline and captures the next label - fixed tokenomics #458). Join Media URLs with '; '. Include the live UI fields (Is New Farm, Media Count, Captured At, Device GPS) plus Extracted GPS and Area Hectares when available. See agentic_ai_context/SUNMINT_TREE_PHOTO_PROCESSING.md section 6.",
       "canonical_labels": [
         "Farm Name",
-        "Plot ID",
+        "Is New Farm",
         "Boundary Type",
         "Media URLs",
+        "Media Count",
+        "Captured At",
+        "Device GPS",
         "Extracted GPS",
         "Area Hectares",
         "Submission Source"
@@ -397,6 +400,22 @@
         "Contributor Name"
       ],
       "dapp_page": "partner_check_in.html"
+    },
+    "PLOT INVALIDATION EVENT": {
+      "category": "Other",
+      "description": "Sentinel/governor soft-invalidates a SunMint Plots row (Status -> invalid) so it drops out of the farm dropdown and plots/index.geojson. Never deletes - keeps Plot ID/Plot Name/Notes audit trail, records Invalidated By / Reason / At. Server-side gate: Retractor Email must resolve to a governor or sentinel in dao_members.json (Sophia = sentinel). Use for mangled/duplicate plot rows. Handler: process_plot_invalidation.gs; tracking tab: Plot Invalidation.",
+      "canonical_labels": [
+        "Plot ID",
+        "Reason",
+        "Retractor Email",
+        "Submission Source"
+      ],
+      "required_fields": [
+        "Plot ID",
+        "Reason",
+        "Retractor Email"
+      ],
+      "dapp_page": "sentinel-autopilot (no DApp page)"
     },
     "PRACTICE EVENT": {
       "category": "Credentialing & Identity",
@@ -640,18 +659,24 @@
     },
     "TREE PLANTING EVENT": {
       "category": "Other",
-      "description": "Record a tree planting with photo and location",
+      "description": "Record a tree planting with photo and location. CONTRACT: send BOTH the canonical Location (e.g. -3.094431, -52.095225; decimal, S/W negative - satisfies Edgar validation) AND Latitude/Longitude decimal fields (the GAS parser fills the SunMint Tree Planting tab lat/lng columns from these lines). Missing Location => validator rejects; missing Latitude/Longitude => parser writes blank lat/lng. Species strings are not standardized ('Cacau - Hybrid' pt vs 'Cacao' en) - use the exact string the farm lead specifies. See agentic_ai_context/SUNMINT_TREE_PHOTO_PROCESSING.md section 7.",
       "canonical_labels": [
         "Tree Count",
         "Location",
+        "Latitude",
+        "Longitude",
         "Species",
         "Planter",
+        "Planting Time",
+        "Photo URL",
         "Attached Filename",
         "Submission Source"
       ],
       "required_fields": [
         "Tree Count",
-        "Location"
+        "Location",
+        "Latitude",
+        "Longitude"
       ],
       "dapp_page": "report_tree_planting.html"
     },
