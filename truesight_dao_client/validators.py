@@ -103,6 +103,23 @@ def positive_integer(value: str) -> None:
         raise ValueError(f"must be > 0 (got {value!r})")
 
 
+def year_value(value: str) -> None:
+    """Accept a 4-digit calendar year (e.g. 2026). Empty allowed.
+
+    Distinct from `yyyymmdd_date`: the Currencies tab `Year` column holds a
+    plain year, so `--year 2026` must validate. (This label was previously
+    mis-wired to `yyyymmdd_date`, which rejected every 4-digit year.)
+    """
+    raw = str(value or "").strip()
+    if not raw:
+        return
+    if not re.fullmatch(r"\d{4}", raw):
+        raise ValueError(f"must be a 4-digit year, e.g. 2026 (got {value!r})")
+    n = int(raw)
+    if not (1000 <= n <= 9999):
+        raise ValueError(f"year out of range (got {value!r})")
+
+
 def latitude(value: str) -> None:
     """Decimal degrees in [-90, 90]. Empty allowed (some events log lat/lng optionally)."""
     raw = str(value or "").strip()
