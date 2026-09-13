@@ -262,6 +262,25 @@ ROUTING: list = [
         ],
         False,
     ),
+    # Reservation \u2014 buyer paid cash, goods held. Books the cash leg only + sets QR RESERVED.
+    # SETTLEMENT is listed FIRST deliberately: the two tags are distinct strings, but keeping the
+    # derived tag ahead of its base tag mirrors the other paired rows and makes precedence obvious.
+    # Spec: agentic_ai_context/RESERVATION_EVENT_SPEC.md.
+    (
+        "[RESERVATION SETTLEMENT EVENT]",
+        [
+            (
+                "RESERVATION_SETTLEMENT_PROCESSING",
+                "processReservationSettlementTelegramLogs",
+            )
+        ],
+        True,
+    ),  # enqueue inventory snapshot \u2014 settlement books the inventory \u22121 offchain asset location
+    (
+        "[RESERVATION EVENT]",
+        [("RESERVATION_PROCESSING", "processReservationTelegramLogs")],
+        False,
+    ),
 ]
 
 

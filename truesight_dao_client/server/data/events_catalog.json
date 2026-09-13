@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 6,
   "description": "Canonical DAO event catalog — single source of truth for event types, labels, and validation. Served by Edgar at GET /events-catalog. Used by Sophia autopilot and server-side dispatch.",
   "events": {
     "ASSET RECEIPT EVENT": {
@@ -774,6 +774,42 @@
         "Draft ID"
       ],
       "dapp_page": "warmup_review.html"
+    },
+    "RESERVATION EVENT": {
+      "category": "Inventory & Supply Chain",
+      "description": "Record a cash reservation for a QR-coded item the buyer has paid for but not yet collected (money in, goods held). Books the cash leg only and sets the QR status to RESERVED \u2014 no inventory or liability line moves. Spec: agentic_ai_context/RESERVATION_EVENT_SPEC.md.",
+      "canonical_labels": [
+        "Buyer",
+        "Buyer Email",
+        "QR Code",
+        "Payment Collected By",
+        "Sale Price",
+        "Currency",
+        "Proof",
+        "Note",
+        "Attached Filename",
+        "Submission Source"
+      ],
+      "required_fields": [
+        "Buyer",
+        "QR Code",
+        "Sale Price"
+      ],
+      "dapp_page": "report_reservation.html"
+    },
+    "RESERVATION SETTLEMENT EVENT": {
+      "category": "Inventory & Supply Chain",
+      "description": "Settle a reservation \u2014 the buyer collects the reserved item. Books the goods legs (inventory \u22121 off the QR's current holder and +1 Cacao Tree To Be Planted liability), sets the QR status to SOLD, and emails the buyer.",
+      "canonical_labels": [
+        "QR Code",
+        "Buyer Email",
+        "Attached Filename",
+        "Submission Source"
+      ],
+      "required_fields": [
+        "QR Code"
+      ],
+      "dapp_page": "report_reservation_settlement.html"
     }
   }
 }
