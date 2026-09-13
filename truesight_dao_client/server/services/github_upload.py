@@ -38,6 +38,44 @@ def upload_if_referenced(text: str, file_bytes: bytes | None, filename: str | No
     return _put_file(pat, owner, repo, branch, path, file_bytes, filename, text)
 
 
+def upload_all_if_referenced(text: str, files: list[tuple[str | None, bytes]]) -> bool:
+    """Contract A (ordered pairing) for multi-file submissions.
+
+    ``files`` is an ordered list of ``(filename, bytes)``. Each file is uploaded
+    to the *k*-th ``github.com/<o>/<r>/(blob|tree)/...`` URL appearing in ``text``
+    -- part *k* binds to destination *k*, matching the client-side CLI gate.
+
+    Back-compat: a single file (or a single URL) behaves exactly like
+    :func:`upload_if_referenced` (first URL wins). Returns True only when every
+    file was uploaded / already present; a file with no matching destination URL
+    fails the whole batch rather than silently dropping bytes.
+    """
+    pat = get_settings().github_pat
+    if not pat or not files:
+        return False
+    matches = list(_URL_RE.finditer(text or ""))
+    if not matches:
+        return False
+    ok = True
+    for idx, (filename, file_bytes) in enumerate(files):
+        if not file_bytes:
+            ok = False
+            continue
+        # ordered pairing: file k -> URL k. More files than destination URLs is a
+        # hard mismatch (the client-side CLI already refuses it) -- fail the batch
+        # rather than mis-file the extra bytes onto an earlier URL.
+        if idx >= len(matches):
+            logger.warning("no destination URL for attachment #%d (%s)", idx + 1, filename)
+            ok = False
+            continue
+        m = matches[idx]
+        owner, repo, branch, path = m.group(1), m.group(2), m.group(3), m.group(4).strip()
+        path = path.split("?")[0].split("#")[0]
+        if not _put_file(pat, owner, repo, branch, path, file_bytes, filename, text):
+            ok = False
+    return ok
+
+
 def _put_file(pat: str, owner: str, repo: str, branch: str, path: str,
               file_bytes: bytes, filename: str | None = None,
               text: str | None = None) -> bool:

@@ -367,7 +367,10 @@ async def check_digital_signature(signature: str = "") -> JSONResponse:
 async def submit_contribution(request: Request, background: BackgroundTasks) -> JSONResponse:
     form = await request.form()
     text = str(form.get("text") or "").strip()
-    attachment = form.get("attachment")
+    # Repeated ``attachment`` parts are supported (contract A, ordered pairing):
+    # part *k* binds to the *k*-th github.com destination URL in the signed text.
+    # A single part behaves exactly as before.
+    attachments = form.getlist("attachment")
 
     # --- verify ---
     signature_verification = "not_attempted"
@@ -447,14 +450,18 @@ async def submit_contribution(request: Request, background: BackgroundTasks) -> 
     # --- attachment → GitHub upload (when text references a github.com blob/tree URL) ---
     file_uploaded = False
     design_written = False
-    if attachment is not None and hasattr(attachment, "read"):
-        try:
-            file_bytes = await attachment.read()
-            file_uploaded = github_upload.upload_if_referenced(
-                text, file_bytes, getattr(attachment, "filename", None)
-            )
-        except Exception:
-            file_uploaded = False
+    _parts: list[tuple[str | None, bytes]] = []
+    for part in attachments:
+        if part is not None and hasattr(part, "read"):
+            try:
+                _parts.append((getattr(part, "filename", None), await part.read()))
+            except Exception:
+                pass
+    if len(_parts) == 1:
+        # unchanged single-file path (keeps existing behaviour + monkeypatch seam)
+        file_uploaded = github_upload.upload_if_referenced(text, _parts[0][1], _parts[0][0])
+    elif len(_parts) > 1:
+        file_uploaded = github_upload.upload_all_if_referenced(text, _parts)
 
     # --- design JSON for [DESIGN UPLOAD EVENT] ---
     if signature_verification == "success" and "[DESIGN UPLOAD EVENT]" in text and file_uploaded:
