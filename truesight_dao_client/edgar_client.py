@@ -222,7 +222,10 @@ class EdgarClient:
         """Submit a signed event to Edgar.
 
         When ``attached_file_path`` is provided, the file bytes are sent as the
-        ``attachment`` multipart field. Edgar's controller scans the signed text
+        ``attachment`` multipart field. For ordered **multi-file** submissions
+        (contract A), pass a list of paths: each file is sent as a repeated
+        ``attachment`` part in order, so part *k* binds to the *k*-th
+        ``Destination ... File Location`` URL in the signed text. Edgar's controller scans the signed text
         for a ``https://github.com/.../(blob|tree)/.../...`` URL and uploads the
         attachment bytes to that GitHub location via the Contents API. Caller
         is responsible for putting the destination URL into the event payload
@@ -234,13 +237,21 @@ class EdgarClient:
         """
         _, _, share_text = self.sign(event_name, attributes)
         files: dict[str, object] = {"text": (None, share_text)}
-        if attached_file_path:
-            import os
-            from pathlib import Path
-            p = Path(attached_file_path)
+        paths: list[str] = []
+        if attached_file_path is not None:
+            paths = (
+                list(attached_file_path)
+                if isinstance(attached_file_path, (list, tuple))
+                else [attached_file_path]
+            )
+        from pathlib import Path
+        for path in paths:
+            p = Path(path)
             if not p.is_file():
-                raise FileNotFoundError(f"Attached file not found: {attached_file_path}")
-            files["attachment"] = (p.name, p.read_bytes())
+                raise FileNotFoundError(f"Attached file not found: {path}")
+            # Repeated "attachment" keys -> requests emits one multipart part per
+            # file, in order (contract A / ordered pairing).
+            files.setdefault("attachment", []).append((p.name, p.read_bytes()))
         return self.session.post(
             f"{self.base_url}/dao/submit_contribution",
             files=files,
@@ -261,6 +272,12 @@ class EdgarClient:
 ATTACHMENT_REPO_BASE_URL = "https://github.com/TrueSightDAO/.github/tree/main/assets/"
 _ATTACHED_FILENAME_LABEL = "Attached Filename"
 _DESTINATION_LABEL_RE = re.compile(r"^Destination .* File Location$")
+
+# A github.com file URL inside a Destination label; Edgar's uploader scans the
+# signed text for these. Multi-attachment pairing (contract A) is by the ORDER
+# of these URLs, so the CLI counts them (restricted to Destination labels, so a
+# Product Image / landing-page URL never inflates the count).
+_GH_FILE_URL_RE = re.compile(r"https://github\.com/[^/\s]+/[^/\s]+/(?:blob|tree)/[^\s]+")
 
 
 def _derive_event_filename_prefix(event_name: str) -> str:
@@ -366,9 +383,10 @@ def build_event_cli(
         )
         parser.add_argument(
             "--attachment",
+            action="append",
             default=None,
             metavar="FILE",
-            help="Local file to attach (e.g. invoice PDF). Sent as multipart alongside the signed event. Edgar parses the Destination Contribution File Location URL in the text and uploads the file to GitHub.",
+            help="Local file to attach (e.g. invoice PDF). Repeatable: pass it once per file for an ordered multi-attachment submission (part k binds to the k-th 'Destination ... File Location' URL in the text -- contract A, ordered pairing). Sent as multipart alongside the signed event. Edgar parses the Destination Contribution File Location URL in the text and uploads the file to GitHub.",
         )
         args = parser.parse_args(argv)
 
@@ -436,9 +454,25 @@ def build_event_cli(
         # auto-generate them so Edgar knows where to commit the file.
         # Without these labels in the payload, Edgar receives the bytes
         # but returns fileUploadedToGithub:false (silent failure mode).
-        if args.attachment:
+        attachments = args.attachment or []
+        if len(attachments) >= 2:
+            # Contract A (ordered pairing): a multi-attachment submission requires
+            # one explicit "Destination ... File Location" URL per file, in matching
+            # order. No auto-fill for multi-file -- that would require one generated
+            # name per position and would hide the binding.
+            dest_urls: list[str] = []
+            for lbl, val in normalized_attrs:
+                if _DESTINATION_LABEL_RE.match(lbl):
+                    dest_urls.extend(_GH_FILE_URL_RE.findall(val))
+            if len(dest_urls) != len(attachments):
+                parser.error(
+                    f"Ordered multi-attachment requires one github.com destination URL per file, in "
+                    f"matching order (contract A); got {len(attachments)} file(s) and "
+                    f"{len(dest_urls)} destination URL(s) under a 'Destination ... File Location' label."
+                )
+        elif attachments:
             seen_labels = {lbl for lbl, _ in normalized_attrs}
-            original_filename = Path(args.attachment).name
+            original_filename = Path(attachments[0]).name
             if _ATTACHED_FILENAME_LABEL in seen_labels:
                 generated_name = next(v for lbl, v in normalized_attrs if lbl == _ATTACHED_FILENAME_LABEL)
             else:
@@ -469,7 +503,7 @@ def build_event_cli(
             print(share_text)
             return 0
 
-        resp = client.submit(event_name, normalized_attrs, attached_file_path=args.attachment)
+        resp = client.submit(event_name, normalized_attrs, attached_file_path=(attachments or None))
         print(f"HTTP {resp.status_code}")
         try:
             data = resp.json()
