@@ -1,5 +1,5 @@
 {
-  "version": 6,
+  "version": 7,
   "description": "Canonical DAO event catalog — single source of truth for event types, labels, and validation. Served by Edgar at GET /events-catalog. Used by Sophia autopilot and server-side dispatch.",
   "events": {
     "ASSET RECEIPT EVENT": {
@@ -65,6 +65,20 @@
         "Amount"
       ],
       "dapp_page": "report_contribution.html"
+    },
+    "CONTRIBUTION REVIEW EVENT": {
+      "category": "Governance",
+      "description": "Governor/approver vote on a pending proposal (approve/reject/abstain)",
+      "canonical_labels": [
+        "Proposal ID",
+        "Vote",
+        "Comment"
+      ],
+      "required_fields": [
+        "Proposal ID",
+        "Vote"
+      ],
+      "dapp_page": "review_proposal.html"
     },
     "CONTRIBUTOR ADD EVENT": {
       "category": "Credentialing & Identity",
@@ -153,6 +167,29 @@
         "Description"
       ],
       "dapp_page": "currency_conversion.html"
+    },
+    "CURRENCY DEFINITION EVENT": {
+      "category": "Inventory & Supply Chain",
+      "description": "Define a QR-ready serializable currency row in the Currencies tab (zero -> QR-ready via Edgar only)",
+      "canonical_labels": [
+        "Currency",
+        "Price in USD",
+        "Serializable",
+        "Product Image",
+        "Landing Page",
+        "Ledger",
+        "Farm Name",
+        "State",
+        "Country",
+        "Year",
+        "Unit Weight (grams)",
+        "Unit Weight (ounces)",
+        "SKU Product ID"
+      ],
+      "required_fields": [
+        "Currency"
+      ],
+      "dapp_page": "define_currency.html"
     },
     "DAO Inventory Expense Event": {
       "category": "Inventory & Supply Chain",
@@ -457,6 +494,31 @@
       ],
       "dapp_page": "create_signature.html"
     },
+    "PROGRAM REGISTRATION REQUEST": {
+      "category": "Credentialing & Identity",
+      "description": "Register a new program (lineage program template)",
+      "canonical_labels": [
+        "Program Slug",
+        "Display Name",
+        "Description",
+        "Logo URL",
+        "Website",
+        "Partner Organization",
+        "Capabilities",
+        "Roster Sheet URL",
+        "Admin Subdomain",
+        "Currency",
+        "Ledger Codename",
+        "Price",
+        "Origin Identity",
+        "Submission Source"
+      ],
+      "required_fields": [
+        "Program Slug",
+        "Display Name"
+      ],
+      "dapp_page": "report_program_registration.html"
+    },
     "PROPOSAL CREATION": {
       "category": "Governance",
       "description": "Submit a new DAO proposal for community voting",
@@ -691,6 +753,22 @@
         "QR Code",
         "SunMint Submission Message ID",
         "Updated by",
+        "Submission Source"
+      ],
+      "required_fields": [
+        "QR Code",
+        "SunMint Submission Message ID"
+      ],
+      "dapp_page": "link_tree_planting.html"
+    },
+    "TREE PLANTING REJECT EVENT": {
+      "category": "QR Code Operations",
+      "description": "Governor/sentinel-only moderation. Marks a NEW SunMint tree-planting submission INVALID. Shares the TREE PLANTING LINK handler, which parses these same fields on the reject path.",
+      "canonical_labels": [
+        "QR Code",
+        "SunMint Submission Message ID",
+        "Updated by",
+        "Reason",
         "Submission Source"
       ],
       "required_fields": [
