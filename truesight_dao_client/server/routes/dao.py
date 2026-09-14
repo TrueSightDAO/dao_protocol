@@ -48,6 +48,17 @@ _GOVERNOR_ONLY_EVENTS = [
     "[DAPP PERMISSION CHANGE EVENT]",
 ]
 
+# Report forms that MUST carry a signature block. A submission bearing one of
+# these markers but no parseable signature block is rejected (400) instead of
+# being logged as ``no_signature_format`` -- see OPEN_FOLLOWUPS.md
+# "dao_protocol: server-side guard (empty body / missing signature format)".
+_SIGNATURE_REQUIRED_EVENTS = [
+    "[CONTRIBUTION EVENT]",
+    "[DAO Inventory Expense Event]",
+    "[ASSET RECEIPT EVENT]",
+    "[INVENTORY MOVEMENT]",
+]
+
 # Target Ledger values accepted for [DAO Inventory Expense Event]. Shipping,
 # supplies, and operational expenses are drawn from the offchain USD balance on
 # the main ledger. Managed ledgers that track their own expenses are derived
@@ -372,6 +383,18 @@ async def submit_contribution(request: Request, background: BackgroundTasks) -> 
     # A single part behaves exactly as before.
     attachments = form.getlist("attachment")
 
+    # --- empty-body guard (server-side; see OPEN_FOLLOWUPS.md) ---
+    # An empty body (or the placeholder the logger would otherwise record) is
+    # never a legitimate event: reject before anything is persisted so a flaky
+    # client cannot pollute the ledger with a ``[No Text Provided]`` row.
+    # Client-side fixes regress silently (this is the second time -- #88).
+    if not text or text == "[No Text Provided]":
+        return JSONResponse(
+            {"error": "empty_body",
+             "detail": "Submission body is empty (no text field / [No Text "
+                       "Provided]). A signed event payload is required."},
+            status_code=400, headers=_ACAO)
+
     # --- verify ---
     signature_verification = "not_attempted"
     verification_result = None
@@ -385,6 +408,19 @@ async def submit_contribution(request: Request, background: BackgroundTasks) -> 
             signature_verification = "error"
     else:
         signature_verification = "no_signature_format"
+
+    # --- missing-signature guard (scoped to signature-requiring report forms) ---
+    # A submission carrying a signed-report marker but no parseable signature
+    # block was dropped in transit -- reject it instead of recording a real
+    # event. Non-signed event types (e.g. email onboarding) are unaffected.
+    if (signature_verification == "no_signature_format"
+            and any(m in text for m in _SIGNATURE_REQUIRED_EVENTS)):
+        return JSONResponse(
+            {"error": "missing_signature_format",
+             "detail": "No signature block found (-------- / My Digital "
+                       "Signature: / Request Transaction ID:). The event was "
+                       "not recorded."},
+            status_code=400, headers=_ACAO)
 
     # --- QR dedup for SALES EVENT (sheet-based, reversible) ---
     if signature_verification == "success" and "[SALES EVENT]" in text:
