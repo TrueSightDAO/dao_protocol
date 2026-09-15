@@ -26,13 +26,18 @@ Run::
                    you've taken over execution of WARMUP_AUTOSEND_PLAN.md; read \\
                    its resume tracker and start at RESUME HERE." \\
         --session-id handoff-warmup-v2
+
+    python -m truesight_dao_client.modules.ping_sophia \
+        --message "Resume the board sprint plan at RESUME HERE." \
+        --session-id handoff-sprint-board \
+        --plan-file "plans/SPRINT_TRUESIGHT_ME_BOARD_PROPOSAL.md"
 """
+
 from __future__ import annotations
 
 import argparse
 import json
 import os
-import sys
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -50,28 +55,49 @@ def _canonical(payload: dict) -> str:
     return json.dumps(payload, separators=(",", ":"), ensure_ascii=False)
 
 
-def ping(message: str, *, session_id: str | None, url: str, timeout: float) -> dict:
+def ping(
+    message: str,
+    *,
+    session_id: str | None,
+    url: str,
+    timeout: float,
+    plan_file: str | None = None,
+) -> dict:
     load_dotenv(Path.cwd() / ".env")
     pub = os.getenv("PUBLIC_KEY", "").strip()
     priv = os.getenv("PRIVATE_KEY", "").strip()
     if not pub or not priv:
-        raise SystemExit("Missing PUBLIC_KEY / PRIVATE_KEY in ./.env (run truesight-dao-auth login).")
+        raise SystemExit(
+            "Missing PUBLIC_KEY / PRIVATE_KEY in ./.env (run truesight-dao-auth login)."
+        )
 
     payload = {
         "message": message,
         "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "nonce": str(uuid.uuid4()),
     }
+    # PR4c(a): optionally name the handoff plan so Sophia (the single writer of
+    # agentic_ai_context/handoffs/active_supervision.json) records an
+    # active-supervision claim for it. Included BEFORE signing so it travels
+    # inside the signed canonical payload and passes verify_payload.
+    if plan_file:
+        payload["plan_file"] = plan_file
     signature = sign_payload(load_private_key(priv), _canonical(payload))
 
     headers = {"X-Public-Key": pub, "Content-Type": "application/json"}
     if session_id:
         headers["X-Session-Id"] = session_id
-    resp = requests.post(url, headers=headers,
-                         json={"payload": payload, "signature": signature}, timeout=timeout)
+    resp = requests.post(
+        url,
+        headers=headers,
+        json={"payload": payload, "signature": signature},
+        timeout=timeout,
+    )
     if resp.status_code == 403:
-        raise SystemExit("403 from Sophia — this key is not a registered governor. "
-                         "ping_sophia is governor-only.")
+        raise SystemExit(
+            "403 from Sophia — this key is not a registered governor. "
+            "ping_sophia is governor-only."
+        )
     if not resp.ok:
         raise SystemExit(f"Sophia returned HTTP {resp.status_code}: {resp.text[:500]}")
     try:
@@ -81,16 +107,43 @@ def ping(message: str, *, session_id: str | None, url: str, timeout: float) -> d
 
 
 def main(argv=None) -> int:
-    p = argparse.ArgumentParser(description="Ping Sophia (autopilot) with a governor-signed message.")
-    p.add_argument("--message", required=True, help="The instruction / message to send Sophia.")
-    p.add_argument("--session-id", default=None,
-                   help="Optional X-Session-Id (groups a multi-turn handoff conversation).")
-    p.add_argument("--url", default=os.getenv("SOPHIA_CHAT_URL", DEFAULT_SOPHIA_URL),
-                   help=f"Sophia /chat-blocking URL (default {DEFAULT_SOPHIA_URL} or $SOPHIA_CHAT_URL).")
-    p.add_argument("--timeout", type=float, default=180.0, help="HTTP timeout seconds (Sophia may run tools).")
+    p = argparse.ArgumentParser(
+        description="Ping Sophia (autopilot) with a governor-signed message."
+    )
+    p.add_argument(
+        "--message", required=True, help="The instruction / message to send Sophia."
+    )
+    p.add_argument(
+        "--session-id",
+        default=None,
+        help="Optional X-Session-Id (groups a multi-turn handoff conversation).",
+    )
+    p.add_argument(
+        "--url",
+        default=os.getenv("SOPHIA_CHAT_URL", DEFAULT_SOPHIA_URL),
+        help=f"Sophia /chat-blocking URL (default {DEFAULT_SOPHIA_URL} or $SOPHIA_CHAT_URL).",
+    )
+    p.add_argument(
+        "--timeout",
+        type=float,
+        default=180.0,
+        help="HTTP timeout seconds (Sophia may run tools).",
+    )
+    p.add_argument(
+        "--plan-file",
+        default=None,
+        help="Optional handoff plan path (e.g. plans/FOO.md). Named in the signed "
+        "payload so Sophia records an active-supervision claim (PR4c(a)).",
+    )
     args = p.parse_args(argv)
 
-    out = ping(args.message, session_id=args.session_id, url=args.url, timeout=args.timeout)
+    out = ping(
+        args.message,
+        session_id=args.session_id,
+        url=args.url,
+        timeout=args.timeout,
+        plan_file=args.plan_file,
+    )
     print(out.get("response") or out.get("message") or json.dumps(out, indent=2))
     return 0
 
