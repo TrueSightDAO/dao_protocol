@@ -11,6 +11,12 @@ VERIFICATION stay out — their signed_text carries farmer emails).
 
 Field names mirror the cron's record schema exactly (schema_version 1), so a
 ledger file is indistinguishable whether written by the emit hook or the cron.
+
+Hard-excluded markers (governor decision 2026-09-17, Gary, thread 30026): some event
+types carry financial PII that must never reach the public ledger even if a folder
+mapping is ever added -- currently [PAYOUT REGISTRATION] (a raw PIX key bound to a
+public key). See HARD_EXCLUDED_MARKERS and
+plans/CRF_ANAPU_SUNMINT_COHORT_PROPOSAL.md section 11.4.
 """
 
 from __future__ import annotations
@@ -34,6 +40,12 @@ _FOLDER_BY_MARKER = {
     "[TREE PLANTING REJECT EVENT]": "tree_planting_reject",
     "[TREE GROWTH MONITORING EVENT]": "tree_growth_monitoring",
 }
+
+# Markers that must NEVER be emitted to the public ledger, even if a folder
+# mapping is later added. [PAYOUT REGISTRATION] carries a raw PIX key (financial
+# PII bound to a named student). Governor decision 2026-09-17 (Gary, thread 30026).
+# See plans/CRF_ANAPU_SUNMINT_COHORT_PROPOSAL.md section 11.4.
+HARD_EXCLUDED_MARKERS = frozenset({"[PAYOUT REGISTRATION]"})
 
 _EMAIL_RE = re.compile(
     r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"
@@ -100,6 +112,10 @@ def emit(text: str, verification_result: dict, message_id: str) -> bool:
     if not text or not verification_result or not message_id:
         return False
     if not verification_result.get("success"):
+        return False
+    if any(marker in text for marker in HARD_EXCLUDED_MARKERS):
+        # Financial PII (raw PIX) -- never publish, regardless of folder mapping.
+        logger.warning("ledger emit skipped (hard-excluded marker) for %s", message_id)
         return False
     folder = _folder_for(text)
     if not folder:

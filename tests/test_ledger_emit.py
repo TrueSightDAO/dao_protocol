@@ -74,3 +74,32 @@ def test_emit_writes_verified_event(monkeypatch):
     assert content["verifiable"] is True
     assert content["signed_payload"]  # exact bytes signed
     json.dumps(content)  # serializable
+
+
+def test_emit_skips_hard_excluded_marker(monkeypatch):
+    """[PAYOUT REGISTRATION] (raw PIX) must never be emitted, even if folder-mapped."""
+    called = []
+    monkeypatch.setattr(ledger_emit, "get_settings", lambda: _S())
+    monkeypatch.setattr(ledger_emit, "_put_file",
+                        lambda pat, repo, path, content: called.append((pat, repo, path, content)) or True)
+    text = (
+        "[PAYOUT REGISTRATION]\n- PIX Key Type: cpf\n- PIX Key: 123.456.789-01\n--------\n"
+        "My Digital Signature: MIIB...SPKI\nRequest Transaction ID: TXN"
+    )
+    assert "[PAYOUT REGISTRATION]" in ledger_emit.HARD_EXCLUDED_MARKERS
+    assert ledger_emit.emit(text, _verification(), "Edgar_payout") is False
+    assert called == []
+
+
+def test_hard_excluded_marker_blocked_even_if_mapped(monkeypatch):
+    """Defense-in-depth: the deny list holds even if a folder mapping is later added."""
+    called = []
+    monkeypatch.setattr(ledger_emit, "get_settings", lambda: _S())
+    monkeypatch.setattr(ledger_emit, "_put_file",
+                        lambda pat, repo, path, content: called.append((pat, repo, path, content)) or True)
+    monkeypatch.setitem(
+        ledger_emit._FOLDER_BY_MARKER, "[PAYOUT REGISTRATION]", "payout_registration"
+    )
+    text = "[PAYOUT REGISTRATION]\n- PIX Key: 123.456.789-01"
+    assert ledger_emit.emit(text, _verification(), "Edgar_payout2") is False
+    assert called == []
