@@ -1,5 +1,5 @@
 {
-  "version": 7,
+  "version": 8,
   "description": "Canonical DAO event catalog — single source of truth for event types, labels, and validation. Served by Edgar at GET /events-catalog. Used by Sophia autopilot and server-side dispatch.",
   "events": {
     "ASSET RECEIPT EVENT": {
@@ -888,6 +888,33 @@
         "QR Code"
       ],
       "dapp_page": "report_reservation_settlement.html"
+    },
+    "PAYOUT EVENT": {
+      "category": "Contribution & Finance",
+      "description": "Record an outbound compensation transfer (e.g. a PIX payout for tree planting). One row per TRANSFER; tree_planting_id is carried as a list because a single transfer may cover N trees. Carries no raw recipient PII (recipient referenced by pk_hash, resolved sink-side against the private payout register). Distinguishes live capture from backfill. Spec: agentic_ai_context/plans/CRF_ANAPU_SUNMINT_COHORT_PROPOSAL.md \u00a712.2/\u00a712.3.",
+      "canonical_labels": [
+        "Program",
+        "Amount",
+        "Currency",
+        "Paid At",
+        "Bank Ref Type",
+        "Bank Ref",
+        "Recipient",
+        "Recipient PK Hash",
+        "Tree Planting IDs",
+        "Status",
+        "Receipt URL",
+        "Submission Source"
+      ],
+      "required_fields": [
+        "Program",
+        "Amount",
+        "Currency",
+        "Paid At",
+        "Bank Ref",
+        "Recipient"
+      ],
+      "dapp_page": "report_payout_event.html"
     }
   }
 }
