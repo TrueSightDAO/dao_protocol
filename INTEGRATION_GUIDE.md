@@ -482,6 +482,7 @@ Sidekiq worker → POST GAS webhook URL
 | `[CREDENTIALING ATTESTATION EVENT]` | Parse → lineage-credentials commit + program roster back-fill |
 | `[CREDENTIALING QUALIFICATION EVENT]` | Parse → lineage-credentials commit (admission path — planned) |
 | `[PRACTICE EVENT]` | Parse → lineage-credentials commit (capoeira-tribo-mirim program) + CV record |
+| `[PAYOUT EVENT]` | Parse → Ops `payouts` tab (+ `cfr program` `payout events` when a CFR `program_slug` is present) |
 
 ### 6.3 Race Condition Prevention
 
