@@ -281,6 +281,16 @@ ROUTING: list = [
         [("RESERVATION_PROCESSING", "processReservationTelegramLogs")],
         False,
     ),
+    # Payout disbursement (CRF_ANAPU_SUNMINT_COHORT_PROPOSAL.md SS12.7 Q3a).
+    # Books no inventory row (a payout is a liability discharge, not a stock move),
+    # so enqueue_inventory is False. The GAS action name is the contract Q3b must
+    # implement; until that sink exists + the webhook env var is set, dispatch_event
+    # logs "no webhook URL ... GAS cron will process" and degrades gracefully.
+    (
+        "[PAYOUT EVENT]",
+        [("PAYOUT_PROCESSING", "processPayoutEventsFromTelegramChatLogs")],
+        False,
+    ),
 ]
 
 
