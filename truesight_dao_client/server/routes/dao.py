@@ -470,10 +470,26 @@ async def submit_contribution(request: Request, background: BackgroundTasks) -> 
     is_sentinel = _resolve_sentinel_auth(
         verification_result if signature_verification == "success" else None
     )
-    message_id = telegram_raw_log.add_record(text or "[No Text Provided]",
-                                             signature_verification=signature_verification,
-                                             governor_authority=governor_authority,
-                                             is_sentinel=is_sentinel)
+    try:
+        message_id = telegram_raw_log.add_record(
+            text or "[No Text Provided]",
+            signature_verification=signature_verification,
+            governor_authority=governor_authority,
+            is_sentinel=is_sentinel)
+    except telegram_raw_log.AppendFailure as exc:
+        # The intake row could NOT be appended and was verified absent on read-back.
+        # Never report success for a submission we did not persist (that was the
+        # 2026-09-18 "silent intake drop": 200 OK, no row, no log). 503 is retryable
+        # AND retry-safe here -- the row is confirmed absent, so a client retry with
+        # the same signature cannot duplicate it (see telegram_raw_log._row_present).
+        logger.error("submit_contribution: intake append failed, returning 503: %s", exc)
+        return JSONResponse(
+            {"status": "error",
+             "error": "intake_append_failed",
+             "signature_verification": signature_verification,
+             "detail": "The submission could not be written to the intake ledger. "
+                       "Nothing was recorded. Safe to retry."},
+            status_code=503, headers=_ACAO)
 
     # --- public attestation ledger emit (A4; non-fatal, cron reconciles) ---
     if signature_verification == "success" and verification_result and message_id:
@@ -683,10 +699,18 @@ async def submit_contribution_review(request: Request, background: BackgroundTas
 
     governor_authority = "YES" if is_governor else "NO"
     is_sentinel_str = "TRUE" if is_sentinel else ""
-    telegram_raw_log.add_record(review_record,
-                                signature_verification="success",
-                                governor_authority=governor_authority,
-                                is_sentinel=is_sentinel_str)
+    try:
+        telegram_raw_log.add_record(review_record,
+                                    signature_verification="success",
+                                    governor_authority=governor_authority,
+                                    is_sentinel=is_sentinel_str)
+    except telegram_raw_log.AppendFailure as exc:
+        logger.error("submit_contribution_review: intake append failed, returning 503: %s", exc)
+        return JSONResponse(
+            {"status": "error", "error": "intake_append_failed",
+             "detail": "The review event could not be written to the intake ledger. "
+                       "Nothing was recorded. Safe to retry."},
+            status_code=503, headers=_ACAO)
 
     # --- call GAS webhook in background ---
     background.add_task(_call_gas_review_webhook)
