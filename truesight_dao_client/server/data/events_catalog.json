@@ -1,5 +1,5 @@
 {
-  "version": 8,
+  "version": 9,
   "description": "Canonical DAO event catalog — single source of truth for event types, labels, and validation. Served by Edgar at GET /events-catalog. Used by Sophia autopilot and server-side dispatch.",
   "events": {
     "ASSET RECEIPT EVENT": {
@@ -891,7 +891,7 @@
     },
     "PAYOUT EVENT": {
       "category": "Contribution & Finance",
-      "description": "Record an outbound compensation transfer (e.g. a PIX payout for tree planting). One row per TRANSFER; tree_planting_id is carried as a list because a single transfer may cover N trees. Carries no raw recipient PII (recipient referenced by pk_hash, resolved sink-side against the private payout register). Distinguishes live capture from backfill. Spec: agentic_ai_context/plans/CRF_ANAPU_SUNMINT_COHORT_PROPOSAL.md \u00a712.2/\u00a712.3.",
+      "description": "Record an outbound compensation transfer (e.g. a PIX payout for tree planting). One row per TRANSFER; tree_planting_id is carried as a list because a single transfer may cover N trees. Carries no raw recipient PII (recipient referenced by pk_hash, resolved sink-side against the private payout register). Distinguishes live capture from backfill. FARMER SETTLEMENT: a payout whose `Tree Planting IDs` join a SunMint Tree Planting row is also the farmer-settlement event (agentic_ai_context/plans/SUNMINT_FARMER_SETTLEMENT_AND_BATCH_LINK_PLAN.md \u00a70.10/\u00a70.11) - no separate [FARMER PAYMENT EVENT] tag exists, because a tree-id-bearing payout IS that event. The payout sink (processPayoutEventsFromTelegramChatLogs) books the settlement legs: a COMMITTED tree (its SunMint row already has `Linked QR Code`) books a cross-ledger transfer (-cash on the QR's own ledger, +cash on main, -1 'Cacao Tree - To Be Paid For' on main); an uncommitted tree books -cash / -1 'To Be Paid For' / +1 'Cacao Tree Planted - Unassigned' on main. FAIL-CLOSED: if the SunMint row or the QR's ledger cannot be positively resolved, the sink writes no ledger row and flags the tracking row LEDGER_NOT_BOOKED. Spec: agentic_ai_context/plans/CRF_ANAPU_SUNMINT_COHORT_PROPOSAL.md \u00a712.2/\u00a712.3.",
       "canonical_labels": [
         "Program",
         "Amount",
