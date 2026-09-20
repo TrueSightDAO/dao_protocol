@@ -156,3 +156,85 @@ def test_dry_run_is_the_default_and_fires_nothing(monkeypatch, capsys):
     assert rc == 0
     assert "DRY-RUN" in out
     assert fired == []
+
+
+# ── one unit per physical tree (Gary 2026-09-20: one signed RSA per tree) ──────
+
+
+def _sm_row(update_id, msg_id, photo, status="NEW", linked="", farmer="Edgar"):
+    """Build a SunMint Tree Planting row in the columns the loader reads."""
+    row = [""] * 20
+    row[m.SM_MESSAGE_ID_COL] = msg_id
+    row[m.SM_PHOTO_COL] = photo
+    row[m.SM_CONTRIBUTOR_COL] = farmer
+    row[m.SM_STATUS_COL] = status
+    row[m.SM_LINKED_QR_COL] = linked
+    row[0] = update_id
+    return row
+
+
+def test_select_tree_units_collapses_identical_rows():
+    # Same tree ingested twice (identical photo + msg id) -> one unit.
+    rows = [
+        _sm_row("U1", "E_001", "https://x/tree02.jpg"),
+        _sm_row("U1", "E_001", "https://x/tree02.jpg"),
+    ]
+    units = m.select_tree_units(rows)
+    assert len(units) == 1
+    assert units[0].submission_message_id == "E_001"
+    assert units[0].identity == "https://x/tree02.jpg"
+    assert units[0].source_row == 2
+    assert units[0].duplicate_rows == (3,)
+
+
+def test_select_tree_units_keeps_distinct_trees_with_shared_message_id():
+    # Distinct photos => distinct trees even if they share a Telegram message id.
+    rows = [
+        _sm_row("U1", "E_001", "https://x/tree02.jpg"),
+        _sm_row("U1", "E_001", "https://x/tree03.jpg"),
+    ]
+    units = m.select_tree_units(rows)
+    assert len(units) == 2
+    assert {u.identity for u in units} == {
+        "https://x/tree02.jpg",
+        "https://x/tree03.jpg",
+    }
+
+
+def test_select_tree_units_skips_group_when_any_row_already_linked():
+    # One copy already linked -> the whole tree is done; never re-offer it.
+    rows = [
+        _sm_row("U1", "E_001", "https://x/tree02.jpg", linked="QRX"),
+        _sm_row("U1", "E_001", "https://x/tree02.jpg"),
+    ]
+    assert m.select_tree_units(rows) == []
+
+
+def test_select_tree_units_skips_unphotographed_and_unlinked_status_only():
+    rows = [
+        _sm_row("U1", "E_001", ""),  # no photo -> not a Decision-0.5 target
+        _sm_row("U2", "E_002", "https://x/tree03.jpg", status="LINKED"),
+    ]
+    assert m.select_tree_units(rows) == []
+
+
+def test_compute_allocations_never_assigns_one_tree_to_two_qrs():
+    # Two distinct-email QRs, one tree -> second QR gets NO tree (1:1 preserved).
+    tree = _tree("E_001")
+    pairs, un = m.compute_allocations(
+        [_qr("Q1", "a@x.com"), _qr("Q2", "b@x.com")], [tree], []
+    )
+    tree_targets = [p.target_id for p in pairs if p.kind == "tree"]
+    assert tree_targets == ["E_001"]  # exactly once
+    assert [q.qr_code for q in un] == ["Q2"]
+
+
+def test_compute_allocations_dedupes_duplicate_tree_units_defensively():
+    # Same identity passed twice into the core -> still one usable unit.
+    t = m.TreeUnit(submission_message_id="E_001", identity="https://x/tree02.jpg")
+    dup = m.TreeUnit(submission_message_id="E_001", identity="https://x/tree02.jpg")
+    pairs, un = m.compute_allocations(
+        [_qr("Q1", "a@x.com"), _qr("Q2", "b@x.com")], [t, dup], []
+    )
+    assert len([p for p in pairs if p.kind == "tree"]) == 1
+    assert [q.qr_code for q in un] == ["Q2"]

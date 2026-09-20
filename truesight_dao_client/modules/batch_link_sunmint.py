@@ -98,10 +98,19 @@ class SoldQr:
 
 @dataclass(frozen=True)
 class TreeUnit:
-    """A confirmed, photographed tree submission available for a 1:1 link."""
+    """A confirmed, photographed tree submission available for a 1:1 link.
+
+    ``identity`` is the physical-tree key (its photo URL). Several sheet rows can
+    describe the *same* tree when a Telegram message is ingested more than once,
+    so units sharing an identity collapse to one -- a tree is never over-counted
+    as supply, and never linked twice (Gary, 2026-09-20: one signed RSA per tree).
+    """
 
     submission_message_id: str
     contributor_name: str = ""
+    identity: str = ""
+    source_row: int = 0
+    duplicate_rows: tuple[int, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -131,6 +140,23 @@ def _norm_email(email: str | None) -> str:
     return (email or "").strip().lower()
 
 
+def _dedupe_tree_units(units: Sequence[TreeUnit]) -> list[TreeUnit]:
+    """Defensive: one unit per physical tree (by ``identity``, else message id).
+
+    ``select_tree_units`` already collapses duplicates at load time; this guards
+    the pure core against a caller passing raw/duplicated units.
+    """
+    seen: set[str] = set()
+    out: list[TreeUnit] = []
+    for unit in units:
+        key = unit.identity or unit.submission_message_id
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(unit)
+    return out
+
+
 def compute_allocations(
     qrs: Sequence[SoldQr],
     tree_units: Sequence[TreeUnit],
@@ -148,6 +174,7 @@ def compute_allocations(
     email but no tree unit left falls back to a plot (still a valid 1:1 link),
     and is only left unallocated when no plot is left either.
     """
+    tree_units = _dedupe_tree_units(tree_units)
     ordered = sorted(qrs, key=lambda q: (q.sold_date or "", q.qr_code))
     used_emails: set[str] = set()
     ti = 0  # next unused *tree* (1:1 -- each photographed tree is consumed once)
@@ -300,28 +327,56 @@ def load_sold_unlinked_qrs(gc) -> list[SoldQr]:
     return out
 
 
-def load_tree_units(gc) -> list[TreeUnit]:
-    """Confirmed, photographed, not-yet-linked SunMint submissions."""
-    sh = gc.open_by_key(SOURCE_SHEET_ID).worksheet(SUNMINT_TAB)
-    out: list[TreeUnit] = []
-    for row in sh.get_all_values()[1:]:
-        if _cell(row, SM_STATUS_COL).upper() != ELIGIBLE_SUBMISSION_STATUS:
-            continue
-        if _cell(row, SM_LINKED_QR_COL):
-            continue  # already linked (idempotency marker)
+def select_tree_units(raw_rows: Sequence[Sequence]) -> list[TreeUnit]:
+    """Collapse eligible SunMint rows to **one unit per physical tree**.
+
+    A Telegram message can be ingested more than once, leaving several sheet rows
+    that describe the same tree (identical photo, coordinates, planting time). We
+    group by the tree's photo URL so the allocator counts each tree once. A group
+    is skipped entirely when **any** of its rows is already linked (col R), so an
+    already-linked tree can never be re-offered via a leftover duplicate row.
+
+    ``raw_rows`` are the sheet's data rows (header already stripped); row numbers
+    in the returned units are 1-based sheet rows for audit.
+    """
+    groups: dict[str, list[tuple[int, Sequence]]] = {}
+    for offset, row in enumerate(raw_rows):
+        row_number = offset + 2  # +1 header, +1 to 1-based
         if not _cell(row, SM_PHOTO_COL):
             continue  # Decision 0.5 targets a *photographed* tree
-        msg_id = _cell(row, SM_MESSAGE_ID_COL)
-        if not msg_id:
+        if not _cell(row, SM_MESSAGE_ID_COL):
             continue
+        groups.setdefault(_cell(row, SM_PHOTO_COL), []).append((row_number, row))
+
+    out: list[TreeUnit] = []
+    for key, members in groups.items():
+        if any(_cell(row, SM_LINKED_QR_COL) for _, row in members):
+            continue  # a row for this tree is already linked -> nothing to do
+        pending = [
+            (rn, row)
+            for rn, row in members
+            if _cell(row, SM_STATUS_COL).upper() == ELIGIBLE_SUBMISSION_STATUS
+        ]
+        if not pending:
+            continue
+        rn, row = pending[0]
         out.append(
             TreeUnit(
-                submission_message_id=msg_id,
+                submission_message_id=_cell(row, SM_MESSAGE_ID_COL),
                 contributor_name=_cell(row, SM_CONTRIBUTOR_COL),
+                identity=key,
+                source_row=rn,
+                duplicate_rows=tuple(m for m, _ in members if m != rn),
             )
         )
-    out.sort(key=lambda u: u.submission_message_id)
+    out.sort(key=lambda u: (u.submission_message_id, u.source_row))
     return out
+
+
+def load_tree_units(gc) -> list[TreeUnit]:
+    """Eligible SunMint submissions, one per physical tree (see select_tree_units)."""
+    sh = gc.open_by_key(SOURCE_SHEET_ID).worksheet(SUNMINT_TAB)
+    return select_tree_units(sh.get_all_values()[1:])
 
 
 def load_plots(gc) -> list[Plot]:
@@ -419,9 +474,10 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     print(render_plan(pairings, unallocated))
+    collapsed = sum(len(t.duplicate_rows) for t in trees)
     print(
-        f"\nInputs: {len(qrs)} sold-unlinked QRs, {len(trees)} eligible tree units, "
-        f"{len(plots)} eligible plots."
+        f"\nInputs: {len(qrs)} sold-unlinked QRs, {len(trees)} eligible tree units "
+        f"({collapsed} duplicate row(s) collapsed), {len(plots)} eligible plots."
     )
 
     if args.json_out:
@@ -430,6 +486,8 @@ def main(argv: list[str] | None = None) -> int:
                 {
                     "pairings": [p.__dict__ for p in pairings],
                     "unallocated": [q.__dict__ for q in unallocated],
+                    "tree_units": [t.__dict__ for t in trees],
+                    "collapsed_duplicate_rows": collapsed,
                 },
                 fh,
                 indent=2,
