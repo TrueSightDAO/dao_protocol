@@ -748,16 +748,16 @@
     },
     "TREE PLANTING LINK EVENT": {
       "category": "QR Code Operations",
-      "description": "Governor-only. Links a Sunmint tree-planting submission (SunMint Tree Planting sheet, status NEW) to a sold Agroverse QR code (status SOLD) — flips the QR to ASSIGNED_TO_TREE, copies planting evidence, books the ledger fulfillment entry, and notifies the QR owner. Rejected server-side (GAS Governors tab check) if the signer isn't a governor.",
+      "description": "Governor-only. Links a sold Agroverse QR code (status SOLD) to either a Sunmint tree-planting submission (SunMint Tree Planting, status NEW) or — since PR6 of SUNMINT_FARMER_SETTLEMENT_AND_BATCH_LINK_PLAN.md — a PLOT (SunMint Plots, via `Plot ID`). Flips the QR to ASSIGNED_TO_TREE, copies planting evidence (lat/long/photo for a tree; a representative plot image for a plot), books the ledger fulfillment entry, and notifies the QR owner. Farmer identity for a plot link is resolved server-side from the plot registry, never the payload. Rejected server-side (GAS Governors tab check) if the signer isn't a governor.",
       "canonical_labels": [
         "QR Code",
         "SunMint Submission Message ID",
+        "Plot ID",
         "Updated by",
         "Submission Source"
       ],
       "required_fields": [
-        "QR Code",
-        "SunMint Submission Message ID"
+        "QR Code"
       ],
       "dapp_page": "link_tree_planting.html"
     },
@@ -855,7 +855,7 @@
     },
     "RESERVATION EVENT": {
       "category": "Inventory & Supply Chain",
-      "description": "Record a cash reservation for a QR-coded item the buyer has paid for but not yet collected (money in, goods held). Books the cash leg only and sets the QR status to RESERVED \u2014 no inventory or liability line moves. Spec: agentic_ai_context/RESERVATION_EVENT_SPEC.md.",
+      "description": "Record a cash reservation for a QR-coded item the buyer has paid for but not yet collected (money in, goods held). Books the cash leg only and sets the QR status to RESERVED — no inventory or liability line moves. Spec: agentic_ai_context/RESERVATION_EVENT_SPEC.md.",
       "canonical_labels": [
         "Buyer",
         "Buyer Email",
@@ -877,7 +877,7 @@
     },
     "RESERVATION SETTLEMENT EVENT": {
       "category": "Inventory & Supply Chain",
-      "description": "Settle a reservation \u2014 the buyer collects the reserved item. Books the goods legs (inventory \u22121 off the QR's current holder and +1 Cacao Tree To Be Planted liability), sets the QR status to SOLD, and emails the buyer.",
+      "description": "Settle a reservation — the buyer collects the reserved item. Books the goods legs (inventory −1 off the QR's current holder and +1 Cacao Tree To Be Planted liability), sets the QR status to SOLD, and emails the buyer.",
       "canonical_labels": [
         "QR Code",
         "Buyer Email",
@@ -891,7 +891,7 @@
     },
     "PAYOUT EVENT": {
       "category": "Contribution & Finance",
-      "description": "Record an outbound compensation transfer (e.g. a PIX payout for tree planting). One row per TRANSFER; tree_planting_id is carried as a list because a single transfer may cover N trees. Carries no raw recipient PII (recipient referenced by pk_hash, resolved sink-side against the private payout register). Distinguishes live capture from backfill. FARMER SETTLEMENT: a payout whose `Tree Planting IDs` join a SunMint Tree Planting row is also the farmer-settlement event (agentic_ai_context/plans/SUNMINT_FARMER_SETTLEMENT_AND_BATCH_LINK_PLAN.md \u00a70.10/\u00a70.11) - no separate [FARMER PAYMENT EVENT] tag exists, because a tree-id-bearing payout IS that event. The payout sink (processPayoutEventsFromTelegramChatLogs) books the settlement legs: a COMMITTED tree (its SunMint row already has `Linked QR Code`) books a cross-ledger transfer (-cash on the QR's own ledger, +cash on main, -1 'Cacao Tree - To Be Paid For' on main); an uncommitted tree books -cash / -1 'To Be Paid For' / +1 'Cacao Tree Planted - Unassigned' on main. FAIL-CLOSED: if the SunMint row or the QR's ledger cannot be positively resolved, the sink writes no ledger row and flags the tracking row LEDGER_NOT_BOOKED. Spec: agentic_ai_context/plans/CRF_ANAPU_SUNMINT_COHORT_PROPOSAL.md \u00a712.2/\u00a712.3.",
+      "description": "Record an outbound compensation transfer (e.g. a PIX payout for tree planting). One row per TRANSFER; tree_planting_id is carried as a list because a single transfer may cover N trees. Carries no raw recipient PII (recipient referenced by pk_hash, resolved sink-side against the private payout register). Distinguishes live capture from backfill. FARMER SETTLEMENT: a payout whose `Tree Planting IDs` join a SunMint Tree Planting row is also the farmer-settlement event (agentic_ai_context/plans/SUNMINT_FARMER_SETTLEMENT_AND_BATCH_LINK_PLAN.md §0.10/§0.11) - no separate [FARMER PAYMENT EVENT] tag exists, because a tree-id-bearing payout IS that event. The payout sink (processPayoutEventsFromTelegramChatLogs) books the settlement legs: a COMMITTED tree (its SunMint row already has `Linked QR Code`) books a cross-ledger transfer (-cash on the QR's own ledger, +cash on main, -1 'Cacao Tree - To Be Paid For' on main); an uncommitted tree books -cash / -1 'To Be Paid For' / +1 'Cacao Tree Planted - Unassigned' on main. FAIL-CLOSED: if the SunMint row or the QR's ledger cannot be positively resolved, the sink writes no ledger row and flags the tracking row LEDGER_NOT_BOOKED. Spec: agentic_ai_context/plans/CRF_ANAPU_SUNMINT_COHORT_PROPOSAL.md §12.2/§12.3.",
       "canonical_labels": [
         "Program",
         "Amount",
