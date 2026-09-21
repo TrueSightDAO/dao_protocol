@@ -291,6 +291,21 @@ ROUTING: list = [
         [("PAYOUT_PROCESSING", "processPayoutEventsFromTelegramChatLogs")],
         False,
     ),
+    # Plot financing - a cash ADVANCE from the DAO that finances N trees on a SunMint plot.
+    # Mints N 'Cacao Tree Planted - Unassigned' pool units on main and seeds the SunMint Plots
+    # 'Contributor Name' registry (col T). Books a pool inventory literal, not a physical stock
+    # move, so enqueue_inventory is False (same as [TREE PLANTING EVENT]). Spec:
+    # agentic_ai_context/plans/SUNMINT_FARMER_SETTLEMENT_AND_BATCH_LINK_PLAN.md.
+    (
+        "[PLOT FINANCING EVENT]",
+        [
+            (
+                "PLOT_FINANCING_PROCESSING",
+                "processPlotFinancingEventsFromTelegramChatLogs",
+            )
+        ],
+        False,
+    ),
 ]
 
 
