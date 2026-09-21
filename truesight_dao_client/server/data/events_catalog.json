@@ -1,5 +1,5 @@
 {
-  "version": 9,
+  "version": 10,
   "description": "Canonical DAO event catalog — single source of truth for event types, labels, and validation. Served by Edgar at GET /events-catalog. Used by Sophia autopilot and server-side dispatch.",
   "events": {
     "ASSET RECEIPT EVENT": {
@@ -439,6 +439,30 @@
         "Contributor Name"
       ],
       "dapp_page": "partner_check_in.html"
+    },
+    "PLOT FINANCING EVENT": {
+      "category": "Contribution & Finance",
+      "description": "Record a cash ADVANCE from the DAO that finances N trees on a SunMint plot (e.g. a per-plot financing of a farmer's planting). Mints N 'Cacao Tree Planted - Unassigned' pool units on the main ledger and seeds the SunMint Plots 'Contributor Name' registry (col T) with the farmer. Per-plot - a farmer may hold many plots. OPPOSITE DIRECTION to [PAYOUT EVENT]: an advance leaves main BEFORE any sale exists, whereas a payout settles a liability AFTER one. The per-tree INFRASTRUCTURE CHARGE a downstream [TREE PLANTING LINK EVENT] transfers from a managed ledger is a SEPARATE number (Currencies 'Tree Charge', col U) - do not conflate it with this financing amount or with the retail price (Currencies col B). FAIL-CLOSED: if the plot row cannot be positively resolved, book nothing. Handler: process_plot_financing_event_telegram_logs.gs; tracking tab: Plot Financing. Spec: agentic_ai_context/plans/SUNMINT_FARMER_SETTLEMENT_AND_BATCH_LINK_PLAN.md.",
+      "canonical_labels": [
+        "Plot ID",
+        "Farmer",
+        "Amount",
+        "Currency",
+        "Tree Count",
+        "Date",
+        "Bank Ref",
+        "Receipt URL",
+        "Notes",
+        "Submission Source"
+      ],
+      "required_fields": [
+        "Plot ID",
+        "Farmer",
+        "Amount",
+        "Currency",
+        "Tree Count"
+      ],
+      "dapp_page": "report_plot_financing.html"
     },
     "PLOT INVALIDATION EVENT": {
       "category": "Other",
