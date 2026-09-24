@@ -71,6 +71,7 @@ def test_previously_missing_tags_are_now_catalogued():
         "PROGRAM REGISTRATION REQUEST",
         "CONTRIBUTION REVIEW EVENT",
         "TREE PLANTING REJECT EVENT",
+        "PAYOUT REGISTRATION",
     ):
         assert tag in _catalog()["events"], f"{tag} fell out of the catalog"
 
