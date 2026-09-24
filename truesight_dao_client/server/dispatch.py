@@ -202,6 +202,14 @@ ROUTING: list = [
         "[TREE PLANTING EVENT]",
         [
             ("TREE_PLANTING_PROCESSING", "processTreePlantingTelegramLogs"),
+            # ADDITIVE (CRF_ANAPU_SUNMINT_COHORT_PROPOSAL.md SS11.5): also mirror CFR-origin
+            # plantings into the private `cfr program` sheet. `dispatch_event` fires EVERY
+            # target in a matched entry, so this MUST be appended -- never replace the
+            # SunMint target above, or the public SunMint Tree Planting tab goes dark.
+            (
+                "CFR_PROGRAM_REGISTRATION_PROCESSING",
+                "processCfrProgramSubmissionsFromTelegramChatLogs",
+            ),
         ],
         False,
     ),
@@ -215,6 +223,12 @@ ROUTING: list = [
             (
                 "TREE_GROWTH_MONITORING",
                 "processTreeGrowthMonitoringFromTelegramChatLogs",
+            ),
+            # ADDITIVE (SS11.5): mirror CFR-origin measurements into the private sheet too.
+            # Keep the SunMint target above -- never replace it.
+            (
+                "CFR_PROGRAM_REGISTRATION_PROCESSING",
+                "processCfrProgramSubmissionsFromTelegramChatLogs",
             ),
         ],
         False,
@@ -230,6 +244,12 @@ ROUTING: list = [
             (
                 "FARM_BOUNDARY_EVIDENCE",
                 "processFarmBoundaryEvidenceFromTelegramChatLogs",
+            ),
+            # ADDITIVE (SS11.5): mirror CFR-origin plot-boundary evidence into the private
+            # sheet (plot registrations tab). Keep the SunMint target above -- never replace it.
+            (
+                "CFR_PROGRAM_REGISTRATION_PROCESSING",
+                "processCfrProgramSubmissionsFromTelegramChatLogs",
             ),
         ],
         False,
