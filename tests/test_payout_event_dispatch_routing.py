@@ -9,9 +9,10 @@ A payout is a *liability discharge* (money out to a recipient), NOT a stock move
 the routing entry must NOT enqueue the Agroverse inventory snapshot. This mirrors the
 distinction the reservation handler pins (settlement books inventory, reservation does not).
 
-The `[PAYOUT REGISTRATION]` sibling (P4) is deliberately NOT routed here — it relies on
-its GAS hourly-trigger safety net — so this test also pins that the two tags stay distinct
-(i.e. routing on `[PAYOUT EVENT]` must not accidentally match `[PAYOUT REGISTRATION]` text).
+The `[PAYOUT REGISTRATION]` sibling (P4) now has its OWN routing entry (see
+tests/test_payout_registration_dispatch_routing.py); this test still pins that the two tags
+stay distinct (i.e. routing on `[PAYOUT EVENT]` must not accidentally match
+`[PAYOUT REGISTRATION]` text).
 """
 
 from __future__ import annotations

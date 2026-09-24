@@ -1,5 +1,5 @@
 {
-  "version": 10,
+  "version": 11,
   "description": "Canonical DAO event catalog — single source of truth for event types, labels, and validation. Served by Edgar at GET /events-catalog. Used by Sophia autopilot and server-side dispatch.",
   "events": {
     "ASSET RECEIPT EVENT": {
@@ -939,6 +939,23 @@
         "Recipient"
       ],
       "dapp_page": "report_payout_event.html"
+    },
+    "PAYOUT REGISTRATION": {
+      "category": "Contribution & Finance",
+      "description": "Declare the PIX payout key a planter wants tree-planting support paid to (CRF Anapu section 11). One row per planting identity (pk_hash); a later registration for the same pk_hash supersedes rather than duplicates. PRIVACY (by LOCATION, section 11.2/11.4): the payload carries the RAW PIX key, written ONLY to the private, governor-only `cfr program` spreadsheet -- never to the publicly-republished Telegram Chat Logs intake -- and the event is excluded from every public JSON cache. Handler: processPayoutRegistrationsFromTelegramChatLogs; private tab: payout registrations. Spec: agentic_ai_context/plans/CRF_ANAPU_SUNMINT_COHORT_PROPOSAL.md section 11.",
+      "canonical_labels": [
+        "Planting Identity (pk_hash)",
+        "Program",
+        "PIX key type",
+        "PIX key",
+        "Submission Source"
+      ],
+      "required_fields": [
+        "Planting Identity (pk_hash)",
+        "Program",
+        "PIX key"
+      ],
+      "dapp_page": "payout_registration.html"
     }
   }
 }

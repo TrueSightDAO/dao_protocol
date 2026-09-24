@@ -311,6 +311,23 @@ ROUTING: list = [
         [("PAYOUT_PROCESSING", "processPayoutEventsFromTelegramChatLogs")],
         False,
     ),
+    # Payout REGISTRATION (CRF_ANAPU_SUNMINT_COHORT_PROPOSAL.md SS11): a planter
+    # DECLARING the PIX key to be paid at -- the sibling of [PAYOUT EVENT] (the
+    # receipt of a transfer, SS12). Books no inventory row (a recipient
+    # declaration, not a stock move). The GAS action runs on the shared payout
+    # deployment; a dedicated DAO_PROTOCOL_WEBHOOK_PAYOUT_REGISTRATION_PROCESSING
+    # env var (see _WEBHOOK_FALLBACK_ENV_KEYS) lets Ops point the two tags at
+    # independently-deployed versions later.
+    (
+        "[PAYOUT REGISTRATION]",
+        [
+            (
+                "PAYOUT_REGISTRATION_PROCESSING",
+                "processPayoutRegistrationsFromTelegramChatLogs",
+            )
+        ],
+        False,
+    ),
     # Plot financing - a cash ADVANCE from the DAO that finances N trees on a SunMint plot.
     # Mints N 'Cacao Tree Planted - Unassigned' pool units on main and seeds the SunMint Plots
     # 'Contributor Name' registry (col T). Books a pool inventory literal, not a physical stock
@@ -329,8 +346,26 @@ ROUTING: list = [
 ]
 
 
+# A brand-new event tag should work the moment it ships, even before Ops sets a
+# dedicated webhook env var: several tags share ONE GAS deployment (`?action=`
+# selects the job), so allow an ordered fallback. The first key with a URL wins.
+# Set the dedicated key to decouple the deployments later.
+_WEBHOOK_FALLBACK_ENV_KEYS: dict = {
+    "PAYOUT_REGISTRATION_PROCESSING": ("PAYOUT_PROCESSING",),
+}
+
+
+def _webhook_env_keys(env_key: str) -> list:
+    """Ordered candidate env keys for a route: the primary, then any fallbacks."""
+    return [env_key, *_WEBHOOK_FALLBACK_ENV_KEYS.get(env_key, ())]
+
+
 def _webhook_url(env_key: str) -> str:
-    return os.environ.get(f"DAO_PROTOCOL_WEBHOOK_{env_key}", "").strip()
+    for key in _webhook_env_keys(env_key):
+        url = os.environ.get(f"DAO_PROTOCOL_WEBHOOK_{key}", "").strip()
+        if url:
+            return url
+    return ""
 
 
 def dispatch_event(text: str) -> None:
