@@ -5,6 +5,7 @@ GET /qr-code-check?qr_code=…[&session_id=…][&format=json]
   - ?session_id present  → reconcile a returned Stripe Checkout (verify paid + qr match → mark SOLD
     + append QR Code Sales) then redirect to landing
   - status MINTED        → create a Stripe Checkout session, redirect to it
+  - status ASSIGNED_TO_TREE → redirect to the DAO provenance page (truesight.me/qr/?id=…)
   - otherwise (SAMPLE/GIFT/SOLD/…) → redirect to landing with UTM
 GET /link-email?qr_code=…&email=…  → write the buyer email onto the QR row (col L)
 
@@ -29,6 +30,13 @@ from ..services import stripe_client
 router = APIRouter()
 logger = logging.getLogger("dao_protocol.qr_code_check")
 SAMPLE_GIFT_STATUSES = {"SAMPLE", "GIFT"}
+
+# A bag QR already linked to a planted tree resolves to the DAO's own provenance
+# page rather than the shop's shipment page: scanning a tree-assigned bag is a
+# lineage lookup, not a purchase. ``truesight.me/qr/?id=<qr_code>`` renders the
+# lineage-assets manifest directly (lineage, event history, certificate).
+PROVENANCE_URL = "https://truesight.me/qr/"
+ASSIGNED_TO_TREE_STATUS = "ASSIGNED_TO_TREE"
 
 
 def _utm_campaign(status: str) -> str:
@@ -59,7 +67,26 @@ def _stripe_get(obj, key, default=None):
         return default
 
 
+def _strip_www(dest: str) -> str:
+    """Canonicalise shop links to the apex host.
+
+    ``www.agroverse.shop`` is a *different* GitHub Pages target than the apex
+    (apex is served from A-records; www is a CNAME to truesightdao.github.io that
+    merely 301s to the apex). Routing scans through it adds a hop that goes stale
+    whenever prod's CNAME changes."""
+    return dest.replace("//www.agroverse.shop", "//agroverse.shop", 1)
+
+
+def _redirect_to_provenance(qr_code: str) -> RedirectResponse:
+    """ASSIGNED_TO_TREE scan -> DAO provenance page (lineage lookup, not a purchase)."""
+    return RedirectResponse(
+        PROVENANCE_URL + "?" + urllib.parse.urlencode({"id": qr_code}),
+        status_code=302,
+    )
+
+
 def _redirect_with_utm(dest: str, qr_code: str, product: str, status: str) -> RedirectResponse:
+    dest = _strip_www(dest)
     query = {"product": product, "qr_code": qr_code}
     if status:
         query["status"] = status
@@ -94,6 +121,9 @@ async def index(request: Request) -> object:
 
     if str(result.get("status")) == "MINTED":
         return _start_checkout(request, qr_code, result)
+
+    if str(result.get("status") or "").upper() == ASSIGNED_TO_TREE_STATUS:
+        return _redirect_to_provenance(qr_code)
 
     return _redirect_with_utm(result["landing_page"], qr_code,
                               result.get("Currency") or "Product", str(result.get("status") or ""))

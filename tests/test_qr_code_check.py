@@ -18,6 +18,12 @@ _MINTED = {"qr_code": "QR1", "status": "MINTED", "landing_page": "https://agrove
            "country": "Brazil", "Year": "2024", "Product Image": "https://img/x.jpg"}
 _SAMPLE = {**_MINTED, "status": "SAMPLE"}
 
+# A tree-assigned bag QR: the sheet's landing_page still points at the shop
+# (with the legacy ``www.`` host) but the status means "lineage lookup", so the
+# scan must resolve to the DAO provenance page instead.
+_ASSIGNED = {**_MINTED, "status": "ASSIGNED_TO_TREE",
+             "landing_page": "https://www.agroverse.shop/shipments/agl4"}
+
 
 def test_missing_qr_code_400():
     assert client.get("/qr-code-check").status_code == 400
@@ -145,3 +151,40 @@ def test_session_already_recorded_is_400(monkeypatch):
     monkeypatch.setattr(qr_code_sales, "already_recorded", lambda c: True)
     r = client.get("/qr-code-check?qr_code=QR1&session_id=cs_x")
     assert r.status_code == 400 and "already recorded" in r.json()["error"]
+
+
+def test_assigned_to_tree_redirects_to_provenance(monkeypatch):
+    """ASSIGNED_TO_TREE scan -> truesight.me/qr/?id=<qr_code>, not the shop page."""
+    monkeypatch.setattr(qr_code_lookup, "lookup", lambda c: _ASSIGNED)
+    r = client.get("/qr-code-check?qr_code=QR1")
+    assert r.status_code == 302, r.text
+    assert r.headers["location"] == "https://truesight.me/qr/?id=QR1"
+
+
+def test_assigned_to_tree_case_insensitive(monkeypatch):
+    monkeypatch.setattr(qr_code_lookup, "lookup", lambda c: {**_ASSIGNED, "status": "assigned_to_tree"})
+    r = client.get("/qr-code-check?qr_code=QR1")
+    assert r.status_code == 302
+    assert r.headers["location"] == "https://truesight.me/qr/?id=QR1"
+
+
+def test_assigned_to_tree_beats_www_landing(monkeypatch):
+    """Regression: a www.agroverse.shop landing_page must not hijack the provenance route."""
+    monkeypatch.setattr(qr_code_lookup, "lookup", lambda c: _ASSIGNED)
+    loc = client.get("/qr-code-check?qr_code=QR1").headers["location"]
+    assert "agroverse.shop" not in loc and "www" not in loc
+
+
+def test_www_landing_stripped_to_apex(monkeypatch):
+    """Non-tree statuses keep the shop landing, but the legacy www host is canonicalised."""
+    monkeypatch.setattr(qr_code_lookup, "lookup", lambda c: {**_ASSIGNED, "status": "SOLD"})
+    loc = client.get("/qr-code-check?qr_code=QR1").headers["location"]
+    assert loc.startswith("https://agroverse.shop/shipments/agl4?")
+    assert "//www." not in loc
+    assert "status=SOLD" in loc
+
+
+def test_blank_status_does_not_route_to_provenance(monkeypatch):
+    monkeypatch.setattr(qr_code_lookup, "lookup", lambda c: {**_ASSIGNED, "status": ""})
+    loc = client.get("/qr-code-check?qr_code=QR1").headers["location"]
+    assert loc.startswith("https://agroverse.shop/shipments/agl4?")
