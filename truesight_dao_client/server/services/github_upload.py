@@ -9,6 +9,9 @@ from __future__ import annotations
 import base64
 import logging
 import re
+import time
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 
 import requests
 
@@ -17,6 +20,52 @@ from ..config import get_settings
 logger = logging.getLogger("dao_protocol.github_upload")
 _URL_RE = re.compile(r"https://github\.com/([^/]+)/([^/]+)/(?:blob|tree)/([^/]+)/(.+)")
 _EVENT_RE = re.compile(r"\[([A-Z ]+?EVENT)\]")
+
+# Transient GitHub conditions worth retrying: throttling/secondary limits (403/429)
+# and server-side errors (5xx). A momentary read-403 must NOT abort an upload.
+_TRANSIENT_STATUS = {403, 429, 500, 502, 503, 504}
+_MAX_ATTEMPTS = 3
+_BACKOFF_BASE = 1.0
+_BACKOFF_CAP = 8.0
+
+
+def _body(resp) -> str:
+    """Best-effort short body snippet for diagnostics (never raises)."""
+    text = getattr(resp, "text", "") or ""
+    return text.strip()[:500]
+
+
+def _is_transient(resp) -> bool:
+    return getattr(resp, "status_code", None) in _TRANSIENT_STATUS
+
+
+def _retry_after_seconds(resp) -> float | None:
+    headers = getattr(resp, "headers", None) or {}
+    raw = headers.get("Retry-After") if hasattr(headers, "get") else None
+    if not raw:
+        return None
+    raw = str(raw).strip()
+    try:
+        return max(0.0, float(raw))
+    except ValueError:
+        pass
+    try:
+        when = parsedate_to_datetime(raw)
+        if when.tzinfo is None:
+            when = when.replace(tzinfo=timezone.utc)
+        return max(0.0, (when - datetime.now(timezone.utc)).total_seconds())
+    except (TypeError, ValueError):
+        return None
+
+
+def _sleep_for(attempt: int, resp=None) -> None:
+    """Sleep before a retry: honor Retry-After, else capped exponential backoff."""
+    delay = _retry_after_seconds(resp)
+    if delay is None:
+        delay = min(_BACKOFF_CAP, _BACKOFF_BASE * (2 ** (attempt - 1)))
+    delay = min(delay, _BACKOFF_CAP)
+    if delay > 0:
+        time.sleep(delay)
 
 
 def _event_type(text: str) -> str:
