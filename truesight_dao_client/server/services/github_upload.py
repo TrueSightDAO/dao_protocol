@@ -131,22 +131,62 @@ def _put_file(pat: str, owner: str, repo: str, branch: str, path: str,
     api = f"https://api.github.com/repos/{owner}/{repo}/contents/{path}"
     headers = {"Authorization": f"token {pat}", "Accept": "application/vnd.github+json"}
     try:
-        get = requests.get(api, headers=headers, timeout=30)
+        # Existence check. GET 200 -> already present; GET 404 -> create. Any other
+        # status (notably a transient 403/secondary-limit) is retried with backoff.
+        get = None
+        for attempt in range(1, _MAX_ATTEMPTS + 1):
+            get = requests.get(api, headers=headers, timeout=30)
+            if get.status_code in (200, 404):
+                break
+            if _is_transient(get) and attempt < _MAX_ATTEMPTS:
+                logger.warning(
+                    "github contents GET %s for %s/%s:%s (attempt %d/%d), retrying: %s",
+                    get.status_code, owner, repo, path, attempt, _MAX_ATTEMPTS, _body(get),
+                )
+                _sleep_for(attempt, get)
+                continue
+            break
         if get.status_code == 200:
             return True
-        if get.status_code == 404:
-            event_type = _event_type(text or "")
-            commit_message = f"Upload {event_type} file: {path}\n\n{text or ''}"
-            put = requests.put(api, headers=headers, timeout=60, json={
-                "message": commit_message,
-                "content": base64.b64encode(file_bytes).decode("ascii"),
-                "branch": branch,
-            })
+        # A read-only 403 (or a still-5xx) must not suppress the create: fall through
+        # to the PUT, which surfaces the true error if the token genuinely can't write.
+        if get.status_code not in (404, 403) and not _is_transient(get):
+            logger.warning("github contents GET %s for %s/%s:%s: %s",
+                           get.status_code, owner, repo, path, _body(get))
+            return False
+        if get.status_code != 404:
+            logger.warning("github contents GET %s for %s/%s:%s, attempting PUT anyway: %s",
+                           get.status_code, owner, repo, path, _body(get))
+
+        event_type = _event_type(text or "")
+        commit_message = f"Upload {event_type} file: {path}\n\n{text or ''}"
+        payload = {
+            "message": commit_message,
+            "content": base64.b64encode(file_bytes).decode("ascii"),
+            "branch": branch,
+        }
+        put = None
+        for attempt in range(1, _MAX_ATTEMPTS + 1):
+            put = requests.put(api, headers=headers, timeout=60, json=payload)
             if put.status_code in (200, 201):
                 return True
-            logger.warning("github upload PUT %s for %s/%s:%s", put.status_code, owner, repo, path)
-            return False
-        logger.warning("github contents GET %s for %s/%s:%s", get.status_code, owner, repo, path)
+            # Idempotent: file already exists / "sha" wasn't supplied -> it is present.
+            if put.status_code == 422 and "sha" in _body(put).lower():
+                logger.warning(
+                    "github upload PUT 422 for %s/%s:%s treated as already-present: %s",
+                    owner, repo, path, _body(put),
+                )
+                return True
+            if _is_transient(put) and attempt < _MAX_ATTEMPTS:
+                logger.warning(
+                    "github upload PUT %s for %s/%s:%s (attempt %d/%d), retrying: %s",
+                    put.status_code, owner, repo, path, attempt, _MAX_ATTEMPTS, _body(put),
+                )
+                _sleep_for(attempt, put)
+                continue
+            break
+        logger.warning("github upload PUT %s for %s/%s:%s: %s",
+                       put.status_code, owner, repo, path, _body(put))
         return False
     except requests.RequestException as exc:
         logger.warning("github upload failed: %s", exc)
