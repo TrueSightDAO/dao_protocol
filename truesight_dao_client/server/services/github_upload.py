@@ -75,7 +75,9 @@ def _event_type(text: str) -> str:
     return "file"
 
 
-def upload_if_referenced(text: str, file_bytes: bytes | None, filename: str | None = None) -> bool:
+def upload_if_referenced(
+    text: str, file_bytes: bytes | None, filename: str | None = None
+) -> bool:
     pat = get_settings().github_pat
     if not pat or not file_bytes:
         return False
@@ -114,20 +116,34 @@ def upload_all_if_referenced(text: str, files: list[tuple[str | None, bytes]]) -
         # hard mismatch (the client-side CLI already refuses it) -- fail the batch
         # rather than mis-file the extra bytes onto an earlier URL.
         if idx >= len(matches):
-            logger.warning("no destination URL for attachment #%d (%s)", idx + 1, filename)
+            logger.warning(
+                "no destination URL for attachment #%d (%s)", idx + 1, filename
+            )
             ok = False
             continue
         m = matches[idx]
-        owner, repo, branch, path = m.group(1), m.group(2), m.group(3), m.group(4).strip()
+        owner, repo, branch, path = (
+            m.group(1),
+            m.group(2),
+            m.group(3),
+            m.group(4).strip(),
+        )
         path = path.split("?")[0].split("#")[0]
         if not _put_file(pat, owner, repo, branch, path, file_bytes, filename, text):
             ok = False
     return ok
 
 
-def _put_file(pat: str, owner: str, repo: str, branch: str, path: str,
-              file_bytes: bytes, filename: str | None = None,
-              text: str | None = None) -> bool:
+def _put_file(
+    pat: str,
+    owner: str,
+    repo: str,
+    branch: str,
+    path: str,
+    file_bytes: bytes,
+    filename: str | None = None,
+    text: str | None = None,
+) -> bool:
     api = f"https://api.github.com/repos/{owner}/{repo}/contents/{path}"
     headers = {"Authorization": f"token {pat}", "Accept": "application/vnd.github+json"}
     try:
@@ -141,7 +157,13 @@ def _put_file(pat: str, owner: str, repo: str, branch: str, path: str,
             if _is_transient(get) and attempt < _MAX_ATTEMPTS:
                 logger.warning(
                     "github contents GET %s for %s/%s:%s (attempt %d/%d), retrying: %s",
-                    get.status_code, owner, repo, path, attempt, _MAX_ATTEMPTS, _body(get),
+                    get.status_code,
+                    owner,
+                    repo,
+                    path,
+                    attempt,
+                    _MAX_ATTEMPTS,
+                    _body(get),
                 )
                 _sleep_for(attempt, get)
                 continue
@@ -151,12 +173,24 @@ def _put_file(pat: str, owner: str, repo: str, branch: str, path: str,
         # A read-only 403 (or a still-5xx) must not suppress the create: fall through
         # to the PUT, which surfaces the true error if the token genuinely can't write.
         if get.status_code not in (404, 403) and not _is_transient(get):
-            logger.warning("github contents GET %s for %s/%s:%s: %s",
-                           get.status_code, owner, repo, path, _body(get))
+            logger.warning(
+                "github contents GET %s for %s/%s:%s: %s",
+                get.status_code,
+                owner,
+                repo,
+                path,
+                _body(get),
+            )
             return False
         if get.status_code != 404:
-            logger.warning("github contents GET %s for %s/%s:%s, attempting PUT anyway: %s",
-                           get.status_code, owner, repo, path, _body(get))
+            logger.warning(
+                "github contents GET %s for %s/%s:%s, attempting PUT anyway: %s",
+                get.status_code,
+                owner,
+                repo,
+                path,
+                _body(get),
+            )
 
         event_type = _event_type(text or "")
         commit_message = f"Upload {event_type} file: {path}\n\n{text or ''}"
@@ -174,48 +208,81 @@ def _put_file(pat: str, owner: str, repo: str, branch: str, path: str,
             if put.status_code == 422 and "sha" in _body(put).lower():
                 logger.warning(
                     "github upload PUT 422 for %s/%s:%s treated as already-present: %s",
-                    owner, repo, path, _body(put),
+                    owner,
+                    repo,
+                    path,
+                    _body(put),
                 )
                 return True
             if _is_transient(put) and attempt < _MAX_ATTEMPTS:
                 logger.warning(
                     "github upload PUT %s for %s/%s:%s (attempt %d/%d), retrying: %s",
-                    put.status_code, owner, repo, path, attempt, _MAX_ATTEMPTS, _body(put),
+                    put.status_code,
+                    owner,
+                    repo,
+                    path,
+                    attempt,
+                    _MAX_ATTEMPTS,
+                    _body(put),
                 )
                 _sleep_for(attempt, put)
                 continue
             break
-        logger.warning("github upload PUT %s for %s/%s:%s: %s",
-                       put.status_code, owner, repo, path, _body(put))
+        logger.warning(
+            "github upload PUT %s for %s/%s:%s: %s",
+            put.status_code,
+            owner,
+            repo,
+            path,
+            _body(put),
+        )
         return False
     except requests.RequestException as exc:
         logger.warning("github upload failed: %s", exc)
         return False
 
 
-def write_design_json(owner: str, repo: str, branch: str, path: str,
-                      content: dict) -> bool:
+def write_design_json(
+    owner: str, repo: str, branch: str, path: str, content: dict
+) -> bool:
     pat = get_settings().github_pat
     if not pat:
         return False
     import json as _json
+
     json_bytes = _json.dumps(content, indent=2).encode("utf-8")
-    return _put_file(pat, owner, repo, branch, path, json_bytes, filename=path.rsplit("/", 1)[-1],
-                     text="[DESIGN UPLOAD EVENT]")
+    return _put_file(
+        pat,
+        owner,
+        repo,
+        branch,
+        path,
+        json_bytes,
+        filename=path.rsplit("/", 1)[-1],
+        text="[DESIGN UPLOAD EVENT]",
+    )
 
 
-def append_order_to_design(owner: str, repo: str, branch: str, json_path: str,
-                           order_entry: dict) -> bool:
+def append_order_to_design(
+    owner: str, repo: str, branch: str, json_path: str, order_entry: dict
+) -> bool:
     pat = get_settings().github_pat
     if not pat:
         return False
     import json as _json
+
     api = f"https://api.github.com/repos/{owner}/{repo}/contents/{json_path}"
     headers = {"Authorization": f"token {pat}", "Accept": "application/vnd.github+json"}
     try:
         get = requests.get(api, headers=headers, timeout=30)
         if get.status_code != 200:
-            logger.warning("design json GET %s for %s/%s:%s", get.status_code, owner, repo, json_path)
+            logger.warning(
+                "design json GET %s for %s/%s:%s",
+                get.status_code,
+                owner,
+                repo,
+                json_path,
+            )
             return False
         body = get.json()
         existing = _json.loads(base64.b64decode(body["content"]).decode("utf-8"))
@@ -224,12 +291,17 @@ def append_order_to_design(owner: str, repo: str, branch: str, json_path: str,
         existing["orders"].append(order_entry)
         json_bytes = _json.dumps(existing, indent=2).encode("utf-8")
         commit_message = f"Append order to design: {json_path}"
-        put = requests.put(api, headers=headers, timeout=60, json={
-            "message": commit_message,
-            "content": base64.b64encode(json_bytes).decode("ascii"),
-            "branch": branch,
-            "sha": body["sha"],
-        })
+        put = requests.put(
+            api,
+            headers=headers,
+            timeout=60,
+            json={
+                "message": commit_message,
+                "content": base64.b64encode(json_bytes).decode("ascii"),
+                "branch": branch,
+                "sha": body["sha"],
+            },
+        )
         return put.status_code in (200, 201)
     except requests.RequestException as exc:
         logger.warning("append_order failed: %s", exc)
@@ -246,7 +318,13 @@ def list_design_directory(owner: str, repo: str, path: str) -> list[dict] | None
         resp = requests.get(api, headers=headers, timeout=30)
         if resp.status_code == 200:
             return resp.json()
-        logger.warning("list_design_directory GET %s for %s/%s:%s", resp.status_code, owner, repo, path)
+        logger.warning(
+            "list_design_directory GET %s for %s/%s:%s",
+            resp.status_code,
+            owner,
+            repo,
+            path,
+        )
         return None
     except requests.RequestException as exc:
         logger.warning("list_design_directory failed: %s", exc)
