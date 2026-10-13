@@ -1,4 +1,4 @@
-"[PAYOUT REGISTRATION] catalog + dispatch-routing regression.
+"""[PAYOUT REGISTRATION] catalog + dispatch-routing regression.
 
 The registration event (CRF_ANAPU_SUNMINT_COHORT_PROPOSAL.md SS11) is a planter
 DECLARING the PIX key to be paid at -- the sibling of [PAYOUT EVENT] (SS12), which
