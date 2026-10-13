@@ -54,6 +54,15 @@ from ..validators import (
 #   K = Unit Weight (grams)
 #   L = Unit Weight (ounces)
 #   M = SKU Product ID
+#   N = Raw Request Text      (conversion/repackaging provenance)
+#   O = Composition JSON      (URL to the per-batch composition file)
+#   P = Inventory Type        (dropdown: States!X)
+#   Q = Sale Type             (dropdown: States!Y)
+#   R = GTIN
+#   S = HS Code
+#   T = Source Documents      (cost/provenance links)
+#   U = Tree Charge
+#   V = FDA Product Code      (FDA Prior Notice / border crossing)
 #
 # "Serializable" (C) defaults to TRUE. When `SKU Product ID` (M) is supplied
 # and no explicit `--serializable` override is given, the GAS handler infers
@@ -77,6 +86,17 @@ LABELS = [
     'Unit Weight (grams)',
     'Unit Weight (ounces)',
     'SKU Product ID',
+    # Conversion / repackaging provenance + trade metadata (cols N-V).
+    # All optional; the GAS handler writes blank cells when omitted.
+    'Raw Request Text',
+    'Composition JSON',
+    'Inventory Type',
+    'Sale Type',
+    'GTIN',
+    'HS Code',
+    'Source Documents',
+    'Tree Charge',
+    'FDA Product Code',
 ]
 
 VALIDATORS = {
@@ -85,6 +105,9 @@ VALIDATORS = {
     'Year': year_value,
     'Unit Weight (grams)': positive_number,
     'Unit Weight (ounces)': positive_number,
+    'Composition JSON': url_or_empty,
+    'Source Documents': url_or_empty,
+    'Tree Charge': positive_number,
 }
 
 NORMALIZERS = {
@@ -98,6 +121,15 @@ NORMALIZERS = {
     'Ledger': strip,
     'Landing Page': strip,
     'SKU Product ID': strip,
+    'Raw Request Text': strip,
+    'Composition JSON': strip,
+    'Inventory Type': strip,
+    'Sale Type': strip,
+    'GTIN': strip,
+    'HS Code': strip,
+    'Source Documents': strip,
+    'Tree Charge': normalize_number,
+    'FDA Product Code': strip,
 }
 
 DEFAULTS = {

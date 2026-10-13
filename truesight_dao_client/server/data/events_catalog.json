@@ -1,5 +1,5 @@
 {
-  "version": 11,
+  "version": 12,
   "description": "Canonical DAO event catalog — single source of truth for event types, labels, and validation. Served by Edgar at GET /events-catalog. Used by Sophia autopilot and server-side dispatch.",
   "events": {
     "ASSET RECEIPT EVENT": {
@@ -184,7 +184,16 @@
         "Year",
         "Unit Weight (grams)",
         "Unit Weight (ounces)",
-        "SKU Product ID"
+        "SKU Product ID",
+        "Raw Request Text",
+        "Composition JSON",
+        "Inventory Type",
+        "Sale Type",
+        "GTIN",
+        "HS Code",
+        "Source Documents",
+        "Tree Charge",
+        "FDA Product Code"
       ],
       "required_fields": [
         "Currency"

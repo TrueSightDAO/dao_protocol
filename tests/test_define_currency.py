@@ -46,7 +46,7 @@ def _run(*args):
 
 
 class TestHelp:
-    def test_cli_help_lists_all_13_labels(self):
+    def test_cli_help_lists_all_labels(self):
         result = _run("--help")
         assert result.returncode == 0
         for label in [
@@ -54,6 +54,9 @@ class TestHelp:
             "Landing Page", "Ledger", "Farm Name", "State", "Country",
             "Year", "Unit Weight (grams)", "Unit Weight (ounces)",
             "SKU Product ID",
+            "Raw Request Text", "Composition JSON", "Inventory Type",
+            "Sale Type", "GTIN", "HS Code", "Source Documents",
+            "Tree Charge", "FDA Product Code",
         ]:
             assert label in result.stdout, f"Missing label: {label}"
         # browser equivalent now points at the DApp page
@@ -100,3 +103,36 @@ class TestOptionalWeights:
         result = _run("--currency", "X", "--dry-run")
         assert result.returncode == 0, result.stderr
         assert "- Currency: X" in result.stdout
+
+
+class TestProvenanceColumns:
+    """Cols N-V: conversion provenance + trade metadata + FDA product code."""
+
+    def test_new_labels_render_in_payload(self):
+        result = _run(
+            "--currency", "Cacao Nibs (KG) + 047-3175-3223 - San Francisco",
+            "--composition-json",
+            "https://raw.githubusercontent.com/TrueSightDAO/agroverse-inventory/main/currency-compositions/abc.json",
+            "--inventory-type", "Cacao Nib",
+            "--sale-type", "Bulk",
+            "--hs-code", "1801",
+            "--fda-product-code", "34BGN04",
+            "--tree-charge", "12.50",
+            "--dry-run",
+        )
+        assert result.returncode == 0, result.stderr
+        assert "- Inventory Type: Cacao Nib" in result.stdout
+        assert "- Sale Type: Bulk" in result.stdout
+        assert "- HS Code: 1801" in result.stdout
+        assert "- FDA Product Code: 34BGN04" in result.stdout
+        assert "- Tree Charge: 12.50" in result.stdout
+        assert "- Composition JSON: https://raw.githubusercontent.com/TrueSightDAO/agroverse-inventory/main/currency-compositions/abc.json" in result.stdout
+
+    def test_bad_composition_url_rejected(self):
+        result = _run("--currency", "X", "--composition-json", "not-a-url", "--dry-run")
+        assert result.returncode != 0
+        assert "http" in (result.stdout + result.stderr).lower()
+
+    def test_bad_tree_charge_rejected(self):
+        result = _run("--currency", "X", "--tree-charge", "abc", "--dry-run")
+        assert result.returncode != 0
