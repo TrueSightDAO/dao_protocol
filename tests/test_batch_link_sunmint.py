@@ -24,7 +24,7 @@ def _tree(mid, farmer="Ana"):
 
 
 def _plot(pid, farmer="Farm X"):
-    return m.Plot(plot_id=pid, contributor_name=farmer)
+    return m.Plot(plot_id=pid, farmer_name=farmer)
 
 
 def _kinds(pairings):
