@@ -28,7 +28,7 @@ Data sources (all read-only here; all on Gary's `1qbZZhf...` sheet unless noted)
 
   * `Agroverse QR codes`      (main ledger `1GE7PUq...`) — the SOLD-unlinked QRs
   * `SunMint Tree Planting`   — eligible *photographed tree* units
-  * `SunMint Plots`           — eligible plot targets + their `Contributor Name`
+  * `SunMint Plots`           — eligible plot targets + their `Farmer` (col T)
 
 Usage::
 
@@ -76,7 +76,7 @@ SM_STATUS_COL = 12  # M  Status
 SM_LINKED_QR_COL = 17  # R  Linked QR Code (presence == already linked)
 
 PLOT_ID_COL = 0  # A  Plot ID
-PLOT_CONTRIBUTOR_COL = 19  # T  Contributor Name (registry-held farmer identity)
+PLOT_FARMER_COL = 19  # T  Farmer (registry-held farmer identity; a MAIN-ledger Fund Handler account name)
 
 # QR statuses that mean "sold but not yet linked to a tree/plot".
 LINKABLE_QR_STATUSES = {"SOLD", "TREE_PLANTING_FUNDS_TRANSFERRED"}
@@ -118,7 +118,7 @@ class Plot:
     """A plot-registry row available for a plot-level association."""
 
     plot_id: str
-    contributor_name: str = ""
+    farmer: str = ""
 
 
 @dataclass(frozen=True)
@@ -225,7 +225,7 @@ def compute_allocations(
                     owner_email=qr.owner_email.strip(),
                     kind="plot",
                     target_id=plot.plot_id,
-                    contributor_name=plot.contributor_name,
+                    contributor_name=plot.farmer,
                     reason=reason,
                 )
             )
@@ -385,10 +385,10 @@ def load_plots(gc) -> list[Plot]:
     out: list[Plot] = []
     for row in sh.get_all_values()[1:]:
         plot_id = _cell(row, PLOT_ID_COL)
-        contributor = _cell(row, PLOT_CONTRIBUTOR_COL)  # col T, registry-held
-        if not plot_id or not contributor:
+        farmer = _cell(row, PLOT_FARMER_COL)  # col T, registry-held
+        if not plot_id or not farmer:
             continue  # blank name => not a valid link target (PR6 fail-closed)
-        out.append(Plot(plot_id=plot_id, contributor_name=contributor))
+        out.append(Plot(plot_id=plot_id, farmer=farmer))
     out.sort(key=lambda p: p.plot_id)
     return out
 
