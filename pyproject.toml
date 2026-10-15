@@ -42,6 +42,7 @@ truesight-dao-report-contribution-review = "truesight_dao_client.report_contribu
 truesight-dao-add-contributor = "truesight_dao_client.modules.add_contributor:main"
 truesight-dao-add-partner = "truesight_dao_client.modules.add_partner:main"
 truesight-dao-report-asset-receipt = "truesight_dao_client.modules.report_asset_receipt:main"
+truesight-dao-report-managed-ledger-transaction = "truesight_dao_client.modules.report_managed_ledger_transaction:main"
 truesight-dao-report-dao-expenses = "truesight_dao_client.modules.report_dao_expenses:main"
 truesight-dao-report-inventory-movement = "truesight_dao_client.modules.report_inventory_movement:main"
 truesight-dao-report-sales = "truesight_dao_client.modules.report_sales:main"
