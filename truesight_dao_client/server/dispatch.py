@@ -138,7 +138,9 @@ ROUTING: list = [
             ("POST_REPACKAGING_CLEANUP", "processPostRepackagingCleanup"),
         ],
         True,
-    ),  # enqueue inventory snapshot (writes to offchain asset location)
+    ),  # depletes/adds inventory via signed rows appended to 'offchain transactions';
+    # 'offchain asset location' is a derived view and must never be written directly
+    # (see agroverse-inventory#18 — direct writes there broke it to #REF!)
     (
         "[ASSET RECEIPT EVENT]",
         [("ASSET_RECEIPT_PROCESSING", "processAssetReceiptsFromTelegramChatLogs")],
