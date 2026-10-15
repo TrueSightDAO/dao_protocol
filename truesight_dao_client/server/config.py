@@ -135,6 +135,13 @@ class Settings(BaseSettings):
     # middleware, zero overhead. `release_stage` defaults to `environment` above.
     bugsnag_api_key: str = ""
 
+    # GAS webhook call tuning. A cold-started Apps Script call can exceed the historical
+    # 30 s ceiling, so the timeout/attempts are env-overridable rather than hard-coded —
+    # operators can widen them per GAS latency without a code change.
+    # From DAO_PROTOCOL_WEBHOOK_{TIMEOUT_S,MAX_ATTEMPTS}.
+    webhook_timeout_s: int = 45
+    webhook_max_attempts: int = 4
+
     @model_validator(mode="after")
     def _resolve_google_sa_paths(self) -> "Settings":
         """Fill any unset service-account path by locating its filename on disk.
