@@ -12,6 +12,7 @@ best-effort at the call sites.
 from __future__ import annotations
 
 import functools
+import re
 import threading
 
 from ..config import get_settings
@@ -36,6 +37,35 @@ def sheets_service(key_path: str | None = None):
 
 def quoted_prefix(sheet_name: str) -> str:
     return "'" + sheet_name.replace("'", "''") + "'"
+
+
+# A value that is unambiguously a number (int/float, optional sign, optional decimals).
+_NUMERIC_RE = re.compile(r"^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$")
+
+
+def coerce_numeric(value):
+    """Return `value` as an int/float when it is a numeric *string*, else unchanged.
+
+    Guards the derived `sum(D)` views on the ledger: those formulas silently DROP
+    text-typed cells, so a signed row whose quantity lands as text (`"2"`) vanishes
+    from the aggregate (real incident 2026-10-15, Unit D thermic-box reclass). The
+    Sheets API *usually* coerces under USER_ENTERED, but an ad-hoc RAW append (gspread
+    default) stores the text and the sum ignores it — so we coerce on the way in,
+    independent of the caller's valueInputOption.
+    """
+    if isinstance(value, str):
+        stripped = value.strip()
+        if _NUMERIC_RE.match(stripped):
+            try:
+                return int(stripped) if stripped.lstrip("+-").isdigit() else float(stripped)
+            except ValueError:
+                return value
+    return value
+
+
+def coerce_row_numeric(row_values: list) -> list:
+    """Map `coerce_numeric` over a row before append."""
+    return [coerce_numeric(v) for v in row_values]
 
 
 def get_values(spreadsheet_id: str, a1_range: str, key_path: str | None = None) -> list[list]:
@@ -84,7 +114,31 @@ def update_cell(spreadsheet_id: str, a1_range: str, value, key_path: str | None 
 
 
 def append_row(spreadsheet_id: str, a1_range: str, row_values: list, key_path: str | None = None) -> dict:
-    """Append one row (Sheets `values.append`, USER_ENTERED, INSERT_ROWS)."""
+    """Append one row (Sheets `values.append`, USER_ENTERED, INSERT_ROWS).
+
+    Numeric strings are coerced to numbers first (`coerce_row_numeric`) so a quantity
+    can never land as text and be dropped by a derived `sum()` view.
+    """
+    return (
+        sheets_service(key_path)
+        .spreadsheets()
+        .values()
+        .append(
+            spreadsheetId=spreadsheet_id,
+            range=a1_range,
+            valueInputOption="USER_ENTERED",
+            insertDataOption="INSERT_ROWS",
+            body={"values": [coerce_row_numeric(row_values)]},
+        )
+        .execute()
+    )
+
+
+def append_row_raw(spreadsheet_id: str, a1_range: str, row_values: list, key_path: str | None = None) -> dict:
+    """Append one row WITHOUT numeric coercion — for genuinely-textual ledgers only.
+
+    Prefer `append_row`; use this only when a numeric-looking string must stay text.
+    """
     return (
         sheets_service(key_path)
         .spreadsheets()
