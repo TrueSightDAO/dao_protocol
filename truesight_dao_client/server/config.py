@@ -135,6 +135,14 @@ class Settings(BaseSettings):
     # middleware, zero overhead. `release_stage` defaults to `environment` above.
     bugsnag_api_key: str = ""
 
+    # Watermark GPS reader (A1.1, POST /dao/read_watermark_gps). A READ-ONLY helper the
+    # DApp calls before signing when EXIF + navigator.geolocation are both empty. Bounded
+    # so a slow/failed read can never block a submission: the DApp treats any non-"ok"
+    # response as "no coords" and proceeds. From
+    # DAO_PROTOCOL_READ_WATERMARK_{TIMEOUT_S,MAX_BYTES}.
+    read_watermark_timeout_s: float = 8.0
+    read_watermark_max_bytes: int = 12_000_000
+
     # GAS webhook call tuning. A cold-started Apps Script call can exceed the historical
     # 30 s ceiling, so the timeout/attempts are env-overridable rather than hard-coded —
     # operators can widen them per GAS latency without a code change.
