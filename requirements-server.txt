@@ -15,3 +15,15 @@ python-multipart>=0.0.6
 stripe>=7.0.0
 httpx>=0.27.0
 bugsnag>=4.7.0
+
+# Watermark GPS reader -- POST /dao/read_watermark_gps (A1.1 of
+# plans/TREE_PLANTING_PHOTO_GPS_CAPTURE_PLAN.md). The vendored reader lazy-imports both
+# inside its functions, so the module imports fine and the mocked unit tests pass without
+# them -- but the REAL runtime path needs them present on the server box, and nothing
+# declared them before. Pins match truesight_autopilot/requirements.txt.
+#   NOTE: pytesseract is only a thin wrapper. The `tesseract` OS binary is ALSO required
+#   (`apt-get install -y tesseract-ocr`) -- it cannot come from this file. Without it the
+#   endpoint raises inside the reader and degrades to status="error" (no coords), i.e.
+#   safe but silently useless.
+Pillow>=10.0.0
+pytesseract>=0.3.10
